@@ -116,7 +116,7 @@ default
     }
 
     money(key id, integer amount) {
-        if (!LoggedIn || id == current) return;
+        // if (!LoggedIn || id == current) return;
 
         totalDonations += amount;
         string giverName = llKey2Name(id);
