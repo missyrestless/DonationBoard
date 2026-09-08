@@ -66,7 +66,7 @@ list     tipAmounts;
 
 string   Name = "";
 string   fallbackTexture = "Default_Texture"; // Name of your fallback texture
-string   VERT_SPACE = "\n \n \n \n \n ";
+string   VERT_SPACE = "\n \n \n \n \n \n \n ";
 string   boardName;
 string   front_texture;
 string   back_texture;
@@ -184,9 +184,34 @@ SetDefaultTextures() {
     }
 }
 
-GetProfilePic(key id) {
+getProfilePic(key id) {
     string url = "https://world.secondlife.com/resident/" + (string)id;
     profileRequestID = llHTTPRequest(url, [HTTP_METHOD, "GET"], "");
+}
+
+setProfilePic(string mess) {
+    string profile_key_prefix = "<meta name=\"imageid\" content=\"";
+    string profile_img_prefix = "<img alt=\"profile image\" src=\"http://secondlife.com/app/image/";
+
+    integer pre_ind = llSubStringIndex(mess, profile_key_prefix);
+    integer pre_len = llStringLength(profile_key_prefix);
+
+    if (pre_ind == -1) {   // Second try
+        pre_ind = llSubStringIndex(mess, profile_img_prefix);
+        pre_len = llStringLength(profile_img_prefix);
+    }
+
+    if (pre_ind == -1) {   // Still no match?
+        SetDefaultTextures();
+    } else {
+        pre_ind += pre_len;
+        key UUID=llGetSubString(mess, pre_ind, pre_ind + 35);
+        if (UUID == NULL_KEY) {
+            SetDefaultTextures();
+        } else {
+            llSetTexture(UUID, side_one);
+        }
+    }
 }
 
 acceptDonation(key id, integer amount) {
@@ -220,7 +245,7 @@ ReadyForDonations(key recKey) {
     // llSetText("Truth & Beauty Beach, " + Name + " \nDonations Welcome!", <0.5,1.0,0.5>, 1.0);
     llInstantMessage(current, "You are now logged in.");
     llSetTimerEvent(checkInterval);
-    GetProfilePic(current);
+    getProfilePic(current);
 }
 
 list get_Textures() {
@@ -336,35 +361,28 @@ displayTextMenu() {
 
     menuMessage = "\nTruth & Beauty Donation Board Texture Menu";
 
-    // Populate the Face menu entries, if only one textured face set selected face
-    llSetPrimitiveParams([PRIM_GLOW, side_one, 0.1]);
-
     // Populate the inventory textures menu entries
+    if (ALL) {
+        menuMessage += "\nTexture ALL BOARDS IN REGION\n";
+        menuMessage += "\nSOLO = Apply selected texture to only this board";
+    } else {
+        menuMessage += "\nTexture THIS BOARD ONLY\n";
+        menuMessage += "\nALL = Apply selected texture to all boards";
+    }
+    menuMessage += "\nFLIP HORIZ = Flip texture horizontally";
+    menuMessage += "\nFLIP VERT  = Flip texture vertically\n";
+    menuMessage += "\nCurrent texture: " + llGetTexture(side_one) + "\n";
+    face_menu = ["BACK", "RESTORE", "EXIT"];
+    if (ALL) {
+        face_menu += ["SOLO"];
+    } else {
+        face_menu += ["ALL"];
+    }
+    face_menu += ["FLIP HORIZ", "FLIP VERT", "PROFILE"];
     text_menu = get_Textures();
     if (text_menu) {
-        if (side_one == -1) {
-            menuMessage += "\nSelect a face to retexture\n";
-        } else {
-            if (ALL) {
-                menuMessage += "\nTexture ALL BOARDS IN REGION\n";
-                menuMessage += "\nSOLO = Apply selected texture to only this board";
-            } else {
-                menuMessage += "\nTexture THIS BOARD ONLY\n";
-                menuMessage += "\nALL = Apply selected texture to all boards";
-            }
-            menuMessage += "\nFLIP HORIZ = Flip texture horizontally";
-            menuMessage += "\nFLIP VERT  = Flip texture vertically\n";
-            menuMessage += "\nCurrent texture: " + llGetTexture(side_one) + "\n";
-            menuMessage += "\nSelect the texture to use on face " + (string)side_one + "\n";
-            face_menu = ["BACK", "RESTORE", "EXIT"];
-            if (ALL) {
-                face_menu += ["SOLO"];
-            } else {
-                face_menu += ["ALL"];
-            }
-            face_menu += ["FLIP HORIZ", "FLIP VERT"];
-            face_menu += text_menu;
-        }
+        menuMessage += "\nSelect the texture to use on face " + (string)side_one + "\n";
+        face_menu += text_menu;
         face_menu += ["BACK", "RESTORE", "EXIT"];
     } else {
         menuMessage += "\nNO TEXTURES FOUND\n";
@@ -614,28 +632,7 @@ default {
     http_response(key req, integer status, list meta, string body) {
         if (req != profileRequestID) return;
 
-        string profile_key_prefix = "<meta name=\"imageid\" content=\"";
-        string profile_img_prefix = "<img alt=\"profile image\" src=\"http://secondlife.com/app/image/";
-
-        integer pre_ind = llSubStringIndex(body, profile_key_prefix);
-        integer pre_len = llStringLength(profile_key_prefix);
-
-        if (pre_ind == -1) {   // Second try
-            pre_ind = llSubStringIndex(body, profile_img_prefix);
-            pre_len = llStringLength(profile_img_prefix);
-        }
-
-        if (pre_ind == -1) {   // Still no match?
-            SetDefaultTextures();
-        } else {
-            pre_ind += pre_len;
-            key UUID=llGetSubString(body, pre_ind, pre_ind + 35);
-            if (UUID == NULL_KEY) {
-                SetDefaultTextures();
-            } else {
-                llSetTexture(UUID, 0);
-            }
-        }
+        setProfilePic(body);
         profileRequestID = NULL_KEY;
     }
 
@@ -877,6 +874,8 @@ state text
             // Flips the texture vertically on selected face, keeping horizontal scale
             scale_vector = llGetTextureScale(side_one);
             llScaleTexture(scale_vector.x, -(scale_vector.y), side_one);
+        } else if (message == "PROFILE") {
+            getProfilePic(owner);
         } else if (message == "RESTORE") {
             linksetValue = llLinksetDataRead(ORIGTEXT_LSD_KEY);
             if (linksetValue != "") {
@@ -914,6 +913,13 @@ state text
         displayTextMenu();
     }
 
+    http_response(key req, integer status, list meta, string body) {
+        if (req != profileRequestID) return;
+
+        setProfilePic(body);
+        profileRequestID = NULL_KEY;
+    }
+
     timer() {
         // Return to the previous state
         if (boardStatus) {
@@ -924,7 +930,6 @@ state text
     }
 
     state_exit() {
-        llSetPrimitiveParams([PRIM_GLOW, ALL_SIDES, 0.0]);
         front_texture = llGetTexture(side_one);
         back_texture = llGetTexture(side_two);
         SetDatastoreValues();
