@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# Set to a destination folder to copy files to
+DEST="${HOME}/transfers/donb"
+
+make clean
+make
+[ $? -eq 0 ] && {
+  [ -x trim_lslo ] && {
+    echo "Trimming comments from optimized LSL script"
+    ./trim_lslo
+  }
+}
+
+[ "$1" == "-c" ] && {
+  rm -rf ${DEST}
+  mkdir -p ${DEST}
+
+  cp DonationBoard.lslo ${DEST}/DonationBoard
+  cp COPYRIGHT LICENSE VERSION ${DEST}
+}

@@ -1,5 +1,3 @@
-# Truth & Beauty Donation Board
-
 The Truth & Beauty Donation Board is a scripted single prim which accepts donation payments.
 
 Rez a Truth & Beauty Donation Board and position it where you want.
