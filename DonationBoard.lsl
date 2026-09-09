@@ -40,7 +40,9 @@ integer inputListen     = -1;
 
 integer  LoggedIn       = FALSE;
 integer  pageNumber     = 1;   // Dialog Menu page number
-integer  tipSplit       = 100; // % given to owner (default 100)
+integer  oneSplit       = 100; // % given to owner if nobody logged in
+integer  twoSplit       =  80; // % given to owner if group member logged in
+integer  tipSplit       = 100; // % given to owner
 integer  totalDonations = 0;
 integer  side_one       = 0;   // Face number for front of board
 integer  side_two       = 5;   // Face number for back of board
@@ -59,7 +61,7 @@ key      setupUser;
 key      current;
 key      profileRequestID;
 key      owner;
-key      tcher = NULL_KEY;
+key      toucher = NULL_KEY;
 
 list     sides;
 list     deftextures;
@@ -67,7 +69,6 @@ list     tipNames;
 list     tipAmounts;
 
 string   Name = "";
-string   fallbackTexture = "Default_Texture"; // Name of your fallback texture
 string   VERT_SPACE = "\n \n \n \n \n \n \n ";
 string   boardName;
 string   front_texture;
@@ -95,9 +96,11 @@ string  GROUP_LSD_KEY      = "group";
 string  ORIGTEXT_LSD_KEY   = "orig_texture";
 // Donation Board Name
 string  BOARD_NAME_LSD_KEY = "board_name";
+// Owner share percent
+string  SHARE_LSD_KEY      = "share_percent";
 
 howtoPay() {
-    llInstantMessage(tcher, "Please right-click the Donation Board and select 'Pay' to make a donation.");
+    llInstantMessage(toucher, "Please right-click the Donation Board and select 'Pay' to make a donation.");
 }
 
 stopDonation() {
@@ -125,11 +128,11 @@ stateDonation() {
     }
     msg += "\nTotal contributions from this board = L$" + (string)totalDonations;
 
-    if (tcher == owner) {
+    if (toucher == owner) {
         llOwnerSay(msg);
     } else {
-        if (tcher) {
-            llRegionSayTo(tcher, 0, msg);
+        if (toucher) {
+            llRegionSayTo(toucher, 0, msg);
         } else {
             llOwnerSay(msg);
         }
@@ -161,7 +164,7 @@ string getBoardSlurl() {
     return "https://maps.secondlife.com/secondlife/" + llEscapeURL(regionName) + "/" + coords;
 }
 
-GetDefaultTextures() {
+getDefaultTextures() {
     integer i;
     integer faces = llGetNumberOfSides();
     for (i = 0; i < faces; i++) {
@@ -170,16 +173,7 @@ GetDefaultTextures() {
     }
 }
 
-UseFallbackTexture() {
-    if (llGetInventoryType(fallbackTexture) == INVENTORY_TEXTURE) {
-        llSetTexture(fallbackTexture, side_one);
-    } else {
-        llOwnerSay("⚠️ Fallback texture not found in inventory: " + fallbackTexture);
-        SetDefaultTextures();
-    }
-}
-
-SetDefaultTextures() {
+setDefaultTextures() {
     integer i;
     integer faces = llGetNumberOfSides();
     for (i = 0; i < faces; i++) {
@@ -205,12 +199,12 @@ setProfilePic(string mess) {
     }
 
     if (pre_ind == -1) {   // Still no match?
-        SetDefaultTextures();
+        setDefaultTextures();
     } else {
         pre_ind += pre_len;
         key UUID=llGetSubString(mess, pre_ind, pre_ind + 35);
         if (UUID == NULL_KEY) {
-            SetDefaultTextures();
+            setDefaultTextures();
         } else {
             llSetTexture(UUID, side_one);
         }
@@ -242,20 +236,21 @@ acceptDonation(key id, integer amount) {
     // Add a little pizzazz
     randParticle = (integer)llFrand(3.0);
     if (randParticle == 1) {
-        Bling();
+        bling();
     } else if (randParticle == 2) {
-        Hearts();
+        hearts();
     } else {
-        Sparkle();
+        sparkle();
     }
     particles_on = TRUE;
     llSetTimerEvent(10);
 }
 
-ReadyForDonations(key recKey) {
+readyForDonations(key recKey) {
     current = recKey;
     Name = llKey2Name(current);
     LoggedIn = TRUE;
+    tipSplit = twoSplit;
 
     // llSetText("Truth & Beauty Beach, " + Name + " \nDonations Welcome!", <0.5,1.0,0.5>, 1.0);
     llInstantMessage(current, "You are now logged in.");
@@ -263,7 +258,7 @@ ReadyForDonations(key recKey) {
     getProfilePic(current);
 }
 
-list get_Textures() {
+list getTextures() {
     list texture_list = [];
     integer count = llGetInventoryNumber(INVENTORY_TEXTURE);
 
@@ -290,7 +285,7 @@ list arrange(list l) {
 
 // Show the specific menu page
 // Pass in the full menu list
-ShowMenu(string msg, list fm) {
+showMenu(string msg, list fm) {
     integer list_length = llGetListLength(fm);
     if (list_length > 12) {
         integer totalPages = (list_length / 10) + (list_length % 10 != 0);
@@ -317,18 +312,18 @@ ShowMenu(string msg, list fm) {
         }
 
         // Send the dialog page
-        llDialog(tcher, msg + " (Page " + (string)pageNumber + " of " +
+        llDialog(toucher, msg + " (Page " + (string)pageNumber + " of " +
                 (string)totalPages + "):", arrange(displayList), dialogChannel);
     } else {
         // Send the dialog
-        llDialog(tcher, msg, arrange(fm), dialogChannel);
+        llDialog(toucher, msg, arrange(fm), dialogChannel);
     }
     llSetTimerEvent(120);   // If no response in time, return to previous state
 }
 
 displayMainMenu() {
     llListenRemove(dialogHandle);
-    dialogHandle = llListen(dialogChannel, "", tcher, "");
+    dialogHandle = llListen(dialogChannel, "", toucher, "");
     list main_menu = [];
 
     menuMessage = "\nTruth & Beauty Donation Board " + VERSION;
@@ -364,7 +359,7 @@ displayMainMenu() {
         main_menu += ["GROUP"];
     }
     main_menu += ["BOARD NAME", "TEXTURE", "EXIT"];
-    ShowMenu(menuMessage, main_menu);
+    showMenu(menuMessage, main_menu);
 }
 
 displayTextMenu() {
@@ -372,7 +367,7 @@ displayTextMenu() {
     list text_menu = [];
 
     llListenRemove(dialogHandle);
-    dialogHandle = llListen(dialogChannel, "", tcher, "");
+    dialogHandle = llListen(dialogChannel, "", toucher, "");
 
     menuMessage = "\nTruth & Beauty Donation Board Texture Menu";
 
@@ -394,7 +389,7 @@ displayTextMenu() {
         face_menu += ["ALL"];
     }
     face_menu += ["FLIP HORIZ", "FLIP VERT", "PROFILE"];
-    text_menu = get_Textures();
+    text_menu = getTextures();
     if (text_menu) {
         menuMessage += "\nSelect the texture to use on face " + (string)side_one + "\n";
         face_menu += text_menu;
@@ -402,10 +397,10 @@ displayTextMenu() {
     } else {
         menuMessage += "\nNO TEXTURES FOUND\n";
     }
-    ShowMenu(menuMessage, face_menu);
+    showMenu(menuMessage, face_menu);
 }
 
-GetDatastoreValues() {
+getDatastoreValues() {
     //
     // Retrieve any configuration values stored in the linkset datastore
     //
@@ -457,9 +452,20 @@ GetDatastoreValues() {
     if (linksetValue != "") {
         GROUP = (integer)linksetValue;
     }
+    // Owner share percent
+    linksetValue = llLinksetDataRead(SHARE_LSD_KEY);
+    if (linksetValue != "") {
+        tipSplit = (integer)linksetValue;
+    } else {
+        if (LoggedIn) {
+            tipSplit = twoSplit;
+        } else {
+            tipSplit = oneSplit;
+        }
+    }
 }
 
-SetDatastoreValues() {
+setDatastoreValues() {
     //
     // Set all configuration values stored in the linkset datastore
     //
@@ -479,6 +485,8 @@ SetDatastoreValues() {
     linksetDataWrite(owner, SOLO_LSD_KEY, (string)ALL, "Solo or All Boards");
     // Group or Owner access linkset data key
     linksetDataWrite(owner, GROUP_LSD_KEY, (string)GROUP, "Group or Owner access");
+    // Owner share percent
+    linksetDataWrite(owner, SHARE_LSD_KEY, (string)tipSplit, "Owner donation percent");
 }
 
 // Writes the provided key/value pair to the prim's linkset datastore
@@ -523,12 +531,54 @@ processMessage(integer chn, string msg) {
     }
 }
 
-ParticlesOff() {
+checkGone(key avatar) {
+    vector Pos = llList2Vector(llGetObjectDetails(avatar, [OBJECT_POS]), 0);
+    vector jarPos = llGetPos();
+    float distance = llVecDist(Pos, jarPos);
+
+    if (distance > maxDistance) {
+        llInstantMessage(avatar, "You were too far from the donation board and have been logged out.");
+        LoggedIn = FALSE;
+        tipSplit = oneSplit;
+        current = owner;
+        Name = llKey2Name(current);
+        getProfilePic(current);
+        llSetTimerEvent(0.0);
+    }
+}
+
+// TODO: fix hover text settings
+setLoggedIn() {
+    if (!LoggedIn) {
+        current = toucher;
+        Name = llKey2Name(current);
+        LoggedIn = TRUE;
+        tipSplit = twoSplit;
+        getProfilePic(current);
+
+        llSetText("🎧 DJ: " + Name + " 🎧\nTips Welcome!", <0.5,1.0,0.5>, 1.0);
+        llInstantMessage(current, "You are now logged in as DJ.");
+        llSetTimerEvent(checkInterval);
+    } else if (toucher == current) {
+        LoggedIn = FALSE;
+        tipSplit = oneSplit;
+        current = owner;
+        Name = llKey2Name(current);
+        getProfilePic(current);
+        llSetText("🎶 Touch to Login as DJ 🎶", <1,1,1>, 1.0);
+        llInstantMessage(toucher, "You have logged out.");
+        llSetTimerEvent(0.0);
+    } else {
+        llInstantMessage(toucher, "A DJ is already logged in.");
+    }
+}
+
+particlesOff() {
     llParticleSystem([]);
 }
 
-Bling() {
-    ParticlesOff();
+bling() {
+    particlesOff();
     llParticleSystem([
         PSYS_PART_FLAGS, (0
                            | PSYS_PART_INTERP_COLOR_MASK
@@ -560,8 +610,8 @@ Bling() {
     ]);
 }
 
-Hearts() {
-    ParticlesOff();
+hearts() {
+    particlesOff();
     llParticleSystem([
         PSYS_SRC_TEXTURE, "5b3f3df0-b20b-5dc4-b49e-377c5805a0e3",
         PSYS_PART_START_SCALE,     <0.1, 0.1, FALSE>,
@@ -596,8 +646,8 @@ Hearts() {
     ]);
 }
 
-Sparkle() {
-    ParticlesOff();
+sparkle() {
+    particlesOff();
     llParticleSystem([
         PSYS_PART_START_SCALE,     <0.00, 0.20, 0>,
         PSYS_PART_END_SCALE,       <0.40, 0.00, 0>,
@@ -629,12 +679,12 @@ default {
     state_entry() {
         // Turn off touch to pay until we are ready to receive payments
         stopDonation();
-        GetDefaultTextures();
-        tcher     = NULL_KEY;
+        getDefaultTextures();
+        toucher     = NULL_KEY;
         owner     = llGetOwner();
 
         // Retrieve any stored configuration or set defaults
-        GetDatastoreValues();
+        getDatastoreValues();
 
         // Remove any previous hover text
         llSetText("", < 1.0, 1.0, 1.0>, 1.0);
@@ -651,7 +701,7 @@ default {
         dialogChannel = 0x80000000 | (integer) ( "0x" + (string) llGetKey() );
         inputChannel  = (integer)(llFrand(-1000000000.0) - 1000000000.0);
 
-        Sparkle();
+        sparkle();
         particles_on = TRUE;
         llSetTimerEvent(10);
 
@@ -659,21 +709,21 @@ default {
     }
 
     touch_start(integer num_detected) {
-        tcher = llDetectedKey(0);
+        toucher = llDetectedKey(0);
         // Ensure only the owner or group members triggers the timer start check
         if (GROUP) {
-            if ((llDetectedGroup(0)) || (tcher == owner)) {
+            if ((llDetectedGroup(0)) || (toucher == owner)) {
                 llResetTime(); // Starts tracking duration
             } else {
                 howtoPay();
-                tcher = NULL_KEY;
+                toucher = NULL_KEY;
             }
         } else {
-            if (tcher == owner) {
+            if (toucher == owner) {
                 llResetTime(); // Starts tracking duration
             } else {
                 howtoPay();
-                tcher = NULL_KEY;
+                toucher = NULL_KEY;
             }
         }
     }
@@ -681,18 +731,24 @@ default {
     touch_end(integer num_detected) {
         float holdTime = llGetTime();
         if (GROUP) {
-            if ((llDetectedGroup(0)) || (tcher == owner)) {
+            if ((llDetectedGroup(0)) || (toucher == owner)) {
                 if (holdTime >= 1.0) {
                     // Long press for dialog menu
                     // Handle dialog menu in its own state
                     state menu;
                 } else {
+                    if (toucher == owner) {
+                        current = owner;
+                    } else {
+                        setLoggedIn();
+                    }
+                    readyForDonations(current);
                     startDonation();
                     state donate;
                 }
             }
         } else {
-            if (tcher == owner) {
+            if (toucher == owner) {
                 if (holdTime >= 1.0) {
                     // Long press for dialog menu
                     // Handle dialog menu in its own state
@@ -711,7 +767,7 @@ default {
             llSetClickAction(CLICK_ACTION_PAY);
             updateHoverText();
             llOwnerSay("Donation Board is ready and online.");
-            ReadyForDonations(owner);
+            readyForDonations(owner);
             startDonation();
             state donate;
         } else {
@@ -741,24 +797,13 @@ default {
     timer() {
         if (particles_on) {
             particles_on = FALSE;
-            ParticlesOff();
+            particlesOff();
             llSetTimerEvent(0.0);
         }
 
         if (!LoggedIn) return;
 
-        vector Pos = llList2Vector(llGetObjectDetails(current, [OBJECT_POS]), 0);
-        vector jarPos = llGetPos();
-        float distance = llVecDist(Pos, jarPos);
-
-        if (distance > maxDistance) {
-            llInstantMessage(current, "You were too far from the donation board and have been logged out.");
-            LoggedIn = FALSE;
-            current = NULL_KEY;
-            Name = "";
-            UseFallbackTexture();
-            llSetTimerEvent(0.0);
-        }
+        checkGone(current);
     }
 
     http_response(key req, integer status, list meta, string body) {
@@ -796,8 +841,8 @@ default {
 
         // Retrieve any stored configuration parameters from linkset datastore
         // If not stored then use defaults
-        GetDatastoreValues();
-        SetDatastoreValues();
+        getDatastoreValues();
+        setDatastoreValues();
     }
 }
 
@@ -840,10 +885,10 @@ state menu {
                 stateDonation();
             } else if (message == "ALL") {
                 ALL = TRUE;
-                linksetDataWrite(tcher, SOLO_LSD_KEY, (string)ALL, "All or Solo Board");
+                linksetDataWrite(toucher, SOLO_LSD_KEY, (string)ALL, "All or Solo Board");
             } else if (message == "SOLO") {
                 ALL = FALSE;
-                linksetDataWrite(tcher, SOLO_LSD_KEY, (string)ALL, "All or Solo Board");
+                linksetDataWrite(toucher, SOLO_LSD_KEY, (string)ALL, "All or Solo Board");
             } else if (message == "GROUP") {
                 if (id == owner) {
                     if (ALL) {
@@ -891,7 +936,7 @@ state menu {
     }
 
     state_exit() {
-        SetDatastoreValues();
+        setDatastoreValues();
         llSetTimerEvent(0);
     }
 }
@@ -900,18 +945,24 @@ state donate {
     state_entry() {
         // Turn on touch to pay
         startDonation();
-        tcher = NULL_KEY;
+        toucher = NULL_KEY;
     }
 
     touch_start(integer num_detected) {
-        tcher = llDetectedKey(0);
+        toucher = llDetectedKey(0);
         // Ensure only the owner or group members triggers the timer start check
         if (GROUP) {
-            if ((llDetectedGroup(0)) || (tcher == owner)) {
-                state menu;
+            if ((llDetectedGroup(0)) || (toucher == owner)) {
+                if (toucher == owner) {
+                    state menu;
+                } else {
+                    setLoggedIn();
+                }
+                readyForDonations(current);
+                startDonation();
             }
         } else {
-            if (tcher == owner) {
+            if (toucher == owner) {
                 state menu;
             }
         }
@@ -924,9 +975,13 @@ state donate {
     timer() {
         if (particles_on) {
             particles_on = FALSE;
-            ParticlesOff();
+            particlesOff();
             llSetTimerEvent(0.0);
         }
+
+        if (!LoggedIn) return;
+
+        checkGone(current);
     }
 
     changed(integer change) {
@@ -945,18 +1000,18 @@ state idle {
     state_entry() {
         // Disable donations
         stopDonation();
-        tcher = NULL_KEY;
+        toucher = NULL_KEY;
     }
 
     touch_start(integer num_detected) {
-        tcher = llDetectedKey(0);
+        toucher = llDetectedKey(0);
         // Ensure only the owner or group members triggers the timer start check
         if (GROUP) {
-            if ((llDetectedGroup(0)) || (tcher == owner)) {
+            if ((llDetectedGroup(0)) || (toucher == owner)) {
                 state menu;
             }
         } else {
-            if (tcher == owner) {
+            if (toucher == owner) {
                 state menu;
             }
         }
@@ -984,10 +1039,10 @@ state text
         vector scale_vector;
         if (message == "ALL") {
             ALL = TRUE;
-            linksetDataWrite(tcher, SOLO_LSD_KEY, (string)ALL, "All or Solo Board");
+            linksetDataWrite(toucher, SOLO_LSD_KEY, (string)ALL, "All or Solo Board");
         } else if (message == "SOLO") {
             ALL = FALSE;
-            linksetDataWrite(tcher, SOLO_LSD_KEY, (string)ALL, "All or Solo Board");
+            linksetDataWrite(toucher, SOLO_LSD_KEY, (string)ALL, "All or Solo Board");
         } else if (message == "FLIP HORIZ") {
             // Flips the texture horizontally on selected face, keeping vertical scale
             scale_vector = llGetTextureScale(side_one);
@@ -1028,7 +1083,7 @@ state text
                     llRegionSay(objChannel, llList2Json(JSON_OBJECT, ["texture", message, "face", (string)side_one]));
                 }
             } else {
-                llRegionSayTo(tcher, 0, "The texture is missing or not a texture: " + message);
+                llRegionSayTo(toucher, 0, "The texture is missing or not a texture: " + message);
             }
         }
         // Re-send the dialog to keep the menu open
@@ -1054,7 +1109,7 @@ state text
     state_exit() {
         front_texture = llGetTexture(side_one);
         back_texture = llGetTexture(side_two);
-        SetDatastoreValues();
+        setDatastoreValues();
         llSetTimerEvent(0);
     }
 }
@@ -1064,9 +1119,9 @@ state warn
     state_entry() {
         integer warnChannel = -999999;
         llListenRemove(warnHandle);
-        warnHandle = llListen(warnChannel, "", tcher, "");
+        warnHandle = llListen(warnChannel, "", toucher, "");
 
-        llDialog(tcher, "\nSelect a face to texture first\n", ["OK"], warnChannel);
+        llDialog(toucher, "\nSelect a face to texture first\n", ["OK"], warnChannel);
         llSetTimerEvent(30.0); // 30-second timer
     }
 
