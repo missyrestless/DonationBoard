@@ -22,7 +22,7 @@
 //                                                //
 ////////////////////////////////////////////////////
 
-string   VERSION = "1.0.1";
+string   VERSION = "1.0.2";
 
 integer  ALL     = TRUE;      // Set to TRUE to effect all boards, FALSE for single board
 integer  GROUP   = FALSE;     // Set to TRUE to allow group members to manage, FALSE for owner only
@@ -44,6 +44,8 @@ integer  tipSplit       = 100; // % given to owner (default 100)
 integer  totalDonations = 0;
 integer  side_one       = 0;   // Face number for front of board
 integer  side_two       = 5;   // Face number for back of board
+integer  particles_on   = FALSE;
+integer  randParticle   = 0;
 integer  boardStatus;          // TRUE if board active, FALSE if board is disabled
 
 integer  deflt_pay      = 250; // Default donation amount
@@ -121,6 +123,7 @@ stateDonation() {
     } else {
         msg = prefix + location + " is disabled and not accepting donations";
     }
+    msg += "\nTotal contributions from this board = L$" + (string)totalDonations;
 
     if (tcher == owner) {
         llOwnerSay(msg);
@@ -235,6 +238,18 @@ acceptDonation(key id, integer amount) {
     if (ownerShare > 0) {
         llInstantMessage(owner, "You retained L$" + (string)ownerShare + " from a tip.");
     }
+
+    // Add a little pizzazz
+    randParticle = (integer)llFrand(3.0);
+    if (randParticle == 1) {
+        Bling();
+    } else if (randParticle == 2) {
+        Hearts();
+    } else {
+        Sparkle();
+    }
+    particles_on = TRUE;
+    llSetTimerEvent(10);
 }
 
 ReadyForDonations(key recKey) {
@@ -398,6 +413,8 @@ GetDatastoreValues() {
     linksetValue = llLinksetDataRead(BOARD_NAME_LSD_KEY);
     if (linksetValue != "") {
         boardName = linksetValue;
+    } else {
+        boardName = llKey2Name(owner);
     }
     // Total amount received linkset data key
     linksetValue = llLinksetDataRead(TOTAL_AMT_LSD_KEY);
@@ -413,16 +430,22 @@ GetDatastoreValues() {
     linksetValue = llLinksetDataRead(FRONT_LSD_KEY);
     if (linksetValue != "") {
         front_texture = linksetValue;
+    } else {
+        front_texture = llGetTexture(side_one);
     }
     // Back face texture linkset data key
     linksetValue = llLinksetDataRead(BACK_LSD_KEY);
     if (linksetValue != "") {
         back_texture = linksetValue;
+    } else {
+        back_texture = llGetTexture(side_two);
     }
     // Original texture linkset data key
     linksetValue = llLinksetDataRead(ORIGTEXT_LSD_KEY);
     if (linksetValue != "") {
         orig_texture = linksetValue;
+    } else {
+        orig_texture = front_texture;
     }
     // Solo or All linkset data key
     linksetValue = llLinksetDataRead(SOLO_LSD_KEY);
@@ -439,7 +462,6 @@ GetDatastoreValues() {
 SetDatastoreValues() {
     //
     // Set all configuration values stored in the linkset datastore
-    // Called from on_rez and when Save button is clicked
     //
     // Donation Board Name
     linksetDataWrite(owner, BOARD_NAME_LSD_KEY, boardName, "Donation Board Name");
@@ -501,19 +523,119 @@ processMessage(integer chn, string msg) {
     }
 }
 
+ParticlesOff() {
+    llParticleSystem([]);
+}
+
+Bling() {
+    ParticlesOff();
+    llParticleSystem([
+        PSYS_PART_FLAGS, (0
+                           | PSYS_PART_INTERP_COLOR_MASK
+                           | PSYS_PART_EMISSIVE_MASK
+                           | PSYS_PART_INTERP_SCALE_MASK
+                           | PSYS_PART_FOLLOW_VELOCITY_MASK
+                           | PSYS_PART_WIND_MASK
+                         ),
+        PSYS_SRC_PATTERN, PSYS_SRC_PATTERN_EXPLODE,
+
+        // Color Parameters
+        PSYS_PART_START_COLOR,     <1.0, 0.5, 0.0>, // Bright Orange
+        PSYS_PART_END_COLOR,       <0.0, 0.0, 1.0>, // Fades to Blue
+
+        // Transparency
+        PSYS_PART_START_ALPHA,     1.0,
+        PSYS_PART_END_ALPHA,       0.2,
+
+        // Size
+        PSYS_PART_START_SCALE,     <0.5, 0.5, 0.0>,
+        PSYS_PART_END_SCALE,       <2.0, 2.0, 0.0>,
+
+        // Timing & Speed
+        PSYS_PART_MAX_AGE,         3.0,
+        PSYS_SRC_BURST_RATE,       0.5,
+        PSYS_SRC_BURST_PART_COUNT, 2,
+        PSYS_SRC_BURST_SPEED_MIN,  1.0,
+        PSYS_SRC_BURST_SPEED_MAX,  3.0
+    ]);
+}
+
+Hearts() {
+    ParticlesOff();
+    llParticleSystem([
+        PSYS_SRC_TEXTURE, "5b3f3df0-b20b-5dc4-b49e-377c5805a0e3",
+        PSYS_PART_START_SCALE,     <0.1, 0.1, FALSE>,
+        PSYS_PART_END_SCALE,       <0.4, 0.4, FALSE>,
+        PSYS_PART_START_ALPHA,     1.0,
+        PSYS_PART_END_ALPHA,       0.5,
+
+        PSYS_SRC_BURST_PART_COUNT, 2,
+        PSYS_SRC_BURST_RATE,       0.5,
+        PSYS_PART_MAX_AGE,         2.0,
+        PSYS_SRC_MAX_AGE,          0.0,
+
+        PSYS_SRC_PATTERN,          2,
+        PSYS_SRC_BURST_SPEED_MIN,  0.5,
+        PSYS_SRC_BURST_SPEED_MAX,  2.0,
+        PSYS_SRC_BURST_RADIUS,     0.000000,
+
+        PSYS_SRC_ANGLE_BEGIN,      0.05*PI,
+        PSYS_SRC_ANGLE_END,        0.05*PI,
+        PSYS_SRC_OMEGA,            <0.0, 0.0, 0.0>,
+
+        PSYS_SRC_ACCEL,            <0.0, 0.0, 0.0>,
+        PSYS_SRC_TARGET_KEY,       (key)"",
+
+        PSYS_PART_FLAGS, ( 0
+                             | PSYS_PART_INTERP_COLOR_MASK
+                             | PSYS_PART_INTERP_SCALE_MASK
+                             | PSYS_PART_EMISSIVE_MASK
+                             | PSYS_PART_FOLLOW_VELOCITY_MASK
+                             | PSYS_PART_WIND_MASK
+                         )
+    ]);
+}
+
+Sparkle() {
+    ParticlesOff();
+    llParticleSystem([
+        PSYS_PART_START_SCALE,     <0.00, 0.20, 0>,
+        PSYS_PART_END_SCALE,       <0.40, 0.00, 0>,
+        PSYS_PART_START_COLOR,     <0.5, 1.0, 0.0>,
+        PSYS_PART_END_COLOR,       <0.0, 0.0, 1.0>,
+        PSYS_PART_START_ALPHA,     1.0,
+        PSYS_PART_END_ALPHA,       0.2,
+        PSYS_SRC_BURST_PART_COUNT, 2,
+        PSYS_SRC_BURST_RATE,       0.05,
+        PSYS_PART_MAX_AGE,         0.30,
+        PSYS_SRC_MAX_AGE,          0.00,
+        PSYS_SRC_PATTERN,          8,
+        PSYS_SRC_BURST_SPEED_MIN,  00.10,
+        PSYS_SRC_BURST_SPEED_MAX,  00.10,
+        PSYS_SRC_BURST_RADIUS,     00.50,
+        PSYS_SRC_ANGLE_BEGIN,      0.00 *PI,
+        PSYS_SRC_ANGLE_END,        1.00 *PI,
+        PSYS_SRC_OMEGA,            <00.00, 00.00, 00.00>,
+        PSYS_SRC_ACCEL,            <00.00, 00.00, -00.10>,
+        PSYS_PART_FLAGS, (integer) ( 0
+                                      | PSYS_PART_INTERP_COLOR_MASK
+                                      | PSYS_PART_INTERP_SCALE_MASK
+                                      | PSYS_PART_EMISSIVE_MASK
+                                   )
+    ]);
+}
+
 default {
     state_entry() {
         // Turn off touch to pay until we are ready to receive payments
         stopDonation();
         GetDefaultTextures();
-        owner     = llGetOwner();
-        linksetValue = llLinksetDataRead(BOARD_NAME_LSD_KEY);
-        if (linksetValue != "") {
-            boardName = linksetValue;
-        } else {
-            boardName = llKey2Name(owner);
-        }
         tcher     = NULL_KEY;
+        owner     = llGetOwner();
+
+        // Retrieve any stored configuration or set defaults
+        GetDatastoreValues();
+
         // Remove any previous hover text
         llSetText("", < 1.0, 1.0, 1.0>, 1.0);
 
@@ -528,6 +650,10 @@ default {
         // Compute a negative communications channel based on prim UUID
         dialogChannel = 0x80000000 | (integer) ( "0x" + (string) llGetKey() );
         inputChannel  = (integer)(llFrand(-1000000000.0) - 1000000000.0);
+
+        Sparkle();
+        particles_on = TRUE;
+        llSetTimerEvent(10);
 
         llRequestPermissions(owner, PERMISSION_DEBIT);
     }
@@ -613,6 +739,12 @@ default {
     }
 
     timer() {
+        if (particles_on) {
+            particles_on = FALSE;
+            ParticlesOff();
+            llSetTimerEvent(0.0);
+        }
+
         if (!LoggedIn) return;
 
         vector Pos = llList2Vector(llGetObjectDetails(current, [OBJECT_POS]), 0);
@@ -662,27 +794,9 @@ default {
         llOwnerSay("The latest Truth & Beauty Donation Board documentation can be found at:");
         llOwnerSay("    https://github.com/missyrestless/DonationBoard#readme");
 
-        linksetValue = llLinksetDataRead(BOARD_NAME_LSD_KEY);
-        if (linksetValue != "") {
-            boardName = linksetValue;
-        } else {
-            boardName = llKey2Name(owner);
-        }
-        linksetValue = llLinksetDataRead(SOLO_LSD_KEY);
-        if (linksetValue != "") {
-            ALL = (integer)linksetValue;
-        } else {
-            ALL = TRUE;
-        }
-        linksetValue = llLinksetDataRead(GROUP_LSD_KEY);
-        if (linksetValue != "") {
-            GROUP = (integer)linksetValue;
-        } else {
-            GROUP = FALSE;
-        }
-        front_texture = llGetTexture(side_one);
-        back_texture = llGetTexture(side_two);
-        orig_texture = front_texture;
+        // Retrieve any stored configuration parameters from linkset datastore
+        // If not stored then use defaults
+        GetDatastoreValues();
         SetDatastoreValues();
     }
 }
@@ -805,6 +919,14 @@ state donate {
 
     money(key id, integer amount) {
         acceptDonation(id, amount);
+    }
+
+    timer() {
+        if (particles_on) {
+            particles_on = FALSE;
+            ParticlesOff();
+            llSetTimerEvent(0.0);
+        }
     }
 
     changed(integer change) {
