@@ -46,6 +46,11 @@ integer  tipSplit       = 100; // % given to owner
 integer  totalDonations = 0;
 integer  side_one       = 0;   // Face number for front of board
 integer  side_two       = 5;   // Face number for back of board
+integer  first_amt      = -1;  // Pay button amounts
+integer  second_amt     = -1;
+integer  third_amt      = -1;
+integer  fourth_amt     = -1;
+integer  default_amt    = -1;
 integer  particles_on   = FALSE;
 integer  randParticle   = 0;
 integer  boardStatus;          // TRUE if board active, FALSE if board is disabled
@@ -98,6 +103,10 @@ string  ORIGTEXT_LSD_KEY   = "orig_texture";
 string  BOARD_NAME_LSD_KEY = "board_name";
 // Owner share percent
 string  SHARE_LSD_KEY      = "share_percent";
+// Default Pay dialog amount
+string  DEF_PAY_LSD_KEY    = "default_payment";
+// Pay dialog button amounts
+string  PAY_AMTS_LSD_KEY   = "pay_amounts";
 
 howtoPay() {
     llInstantMessage(toucher, "Please right-click the Donation Board and select 'Pay' to make a donation.");
@@ -400,6 +409,51 @@ displayTextMenu() {
     showMenu(menuMessage, face_menu);
 }
 
+displayAmtsMenu() {
+    llListenRemove(dialogHandle);
+    dialogHandle = llListen(dialogChannel, "", toucher, "");
+    list amts_menu = [];
+
+    menuMessage = "\nTruth & Beauty Donation Board " + VERSION;
+    menuMessage = "\nCurrent Pay Buttons: " + llDumpList2String(quick_pay, ", ");
+    menuMessage = "\nCurrent Default Amount: " + (string)deflt_pay;
+    if (ALL) {
+        menuMessage += "\nSet Donation Amounts on ALL BOARDS IN REGION\n";
+        menuMessage += "\nSOLO = Set donation amounts on only this board";
+    } else {
+        menuMessage += "\nSet Donation Amounts on THIS BOARD ONLY\n";
+        menuMessage += "\nALL = Set donation amounts on all boards in region";
+    }
+    if (first_amt == -1) {
+        menuMessage += "\nSelect first (lowest) donation amount for Pay Button 1\n";
+        amts_menu += ["10", "20", "50", "100", "250", "500", "750", "SKIP"];
+    } else if (second_amt == -1) {
+        menuMessage += "\nSelect second donation amount for Pay Button 2\n";
+        amts_menu += ["50", "100", "250", "300", "500", "750", "1000", "SKIP"];
+    } else if (third_amt == -1) {
+        menuMessage += "\nSelect third donation amount for Pay Button 3\n";
+        amts_menu += ["150", "250", "300", "500", "750", "1000", "1500", "SKIP"];
+    } else if (fourth_amt == -1) {
+        menuMessage += "\nSelect fourth donation amount for Pay Button 4\n";
+        amts_menu += ["150", "200", "250", "500", "750", "1000", "1500", "SKIP"];
+    } else if (default_amt == -1) {
+        menuMessage += "\nSelect default donation amount\n";
+        amts_menu += ["10", "20", "50", "100", "250", "300", "500", "SKIP"];
+    } else {
+        menuMessage += "\nClick DONE to save these pay buttons values\n";
+        menuMessage += "\nClick a BUTTON button to change that button's value\n";
+        amts_menu += ["BUTTON 1", "BUTTON 2", "BUTTON 3", "BUTTON 4", "DEFAULT"];
+    }
+    if (ALL) {
+        amts_menu += ["SOLO"];
+    } else {
+        amts_menu += ["ALL"];
+    }
+    amts_menu += ["DONE", "EXIT"];
+    showMenu(menuMessage, amts_menu);
+}
+
+
 getDatastoreValues() {
     //
     // Retrieve any configuration values stored in the linkset datastore
@@ -452,6 +506,16 @@ getDatastoreValues() {
     if (linksetValue != "") {
         GROUP = (integer)linksetValue;
     }
+    // Default Pay dialog amount
+    linksetValue = llLinksetDataRead(DEF_PAY_LSD_KEY);
+    if (linksetValue != "") {
+        deflt_pay = (integer)linksetValue;
+    }
+    // Pay dialog button amounts
+    linksetValue = llLinksetDataRead(PAY_AMTS_LSD_KEY);
+    if (linksetValue != "") {
+        quick_pay = llCSV2List(linksetValue);
+    }
     // Owner share percent
     linksetValue = llLinksetDataRead(SHARE_LSD_KEY);
     if (linksetValue != "") {
@@ -470,36 +534,40 @@ setDatastoreValues() {
     // Set all configuration values stored in the linkset datastore
     //
     // Donation Board Name
-    linksetDataWrite(owner, BOARD_NAME_LSD_KEY, boardName, "Donation Board Name");
+    linksetDataWrite(BOARD_NAME_LSD_KEY, boardName, "Donation Board Name");
     // Payment Avatar UUID linkset data key
-    linksetDataWrite(owner, PAY_UUID_LSD_KEY, (string)current, "Payment receiving UUID");
+    linksetDataWrite(PAY_UUID_LSD_KEY, (string)current, "Payment receiving UUID");
     // Total amount received linkset data key
-    linksetDataWrite(owner, TOTAL_AMT_LSD_KEY, (string)totalDonations, "Total amount donated");
+    linksetDataWrite(TOTAL_AMT_LSD_KEY, (string)totalDonations, "Total amount donated");
     // Front face texture linkset data key
-    linksetDataWrite(owner, FRONT_LSD_KEY, (string)front_texture, "Front Side Texture");
+    linksetDataWrite(FRONT_LSD_KEY, (string)front_texture, "Front Side Texture");
     // Back face texture linkset data key
-    linksetDataWrite(owner, BACK_LSD_KEY, (string)back_texture, "Back Side Texture");
+    linksetDataWrite(BACK_LSD_KEY, (string)back_texture, "Back Side Texture");
     // Original face texture linkset data key
-    linksetDataWrite(owner, ORIGTEXT_LSD_KEY, (string)orig_texture, "Original Front Texture");
+    linksetDataWrite(ORIGTEXT_LSD_KEY, (string)orig_texture, "Original Front Texture");
     // Solo or All linkset data key
-    linksetDataWrite(owner, SOLO_LSD_KEY, (string)ALL, "Solo or All Boards");
+    linksetDataWrite(SOLO_LSD_KEY, (string)ALL, "Solo or All Boards");
     // Group or Owner access linkset data key
-    linksetDataWrite(owner, GROUP_LSD_KEY, (string)GROUP, "Group or Owner access");
+    linksetDataWrite(GROUP_LSD_KEY, (string)GROUP, "Group or Owner access");
+    // Default Pay dialog amount
+    linksetDataWrite(DEF_PAY_LSD_KEY, (string)deflt_pay, "Default Pay Amount");
+    // Pay dialog button amounts
+    linksetDataWrite(PAY_AMTS_LSD_KEY, llList2CSV(quick_pay), "Pay Buttons Amounts");
     // Owner share percent
-    linksetDataWrite(owner, SHARE_LSD_KEY, (string)tipSplit, "Owner donation percent");
+    linksetDataWrite(SHARE_LSD_KEY, (string)tipSplit, "Owner donation percent");
 }
 
 // Writes the provided key/value pair to the prim's linkset datastore
-integer linksetDataWrite(key id, string lsdKey, string value, string cfg) {
+integer linksetDataWrite(string lsdKey, string value, string cfg) {
     string val = llStringTrim(value, STRING_TRIM);
     integer returnCode = llLinksetDataWrite(lsdKey, val);
     if (returnCode == LINKSETDATA_OK) {
-        if (id) {
-            llRegionSayTo(id, 0, "[Donation Board] " + cfg + " saved.");
+        if (owner) {
+            llRegionSayTo(owner, 0, "[Donation Board] " + cfg + " saved.");
         }
     } else if (returnCode != LINKSETDATA_NOUPDATE) {
-        if (id) {
-            llRegionSayTo(id, 0, "[Donation Board] " + cfg + " save failed (code " + (string)returnCode + ").");
+        if (owner) {
+            llRegionSayTo(owner, 0, "[Donation Board] " + cfg + " save failed (code " + (string)returnCode + ").");
         }
     }
     return returnCode;
@@ -854,7 +922,7 @@ state menu {
     listen(integer channel, string name, key id, string message) {
         if (channel == inputChannel) {
             boardName = llStringTrim(message, STRING_TRIM);
-            linksetDataWrite(owner, BOARD_NAME_LSD_KEY, boardName, "Donation Board Name");
+            linksetDataWrite(BOARD_NAME_LSD_KEY, boardName, "Donation Board Name");
 
             updateHoverText();
 
@@ -885,10 +953,10 @@ state menu {
                 stateDonation();
             } else if (message == "ALL") {
                 ALL = TRUE;
-                linksetDataWrite(toucher, SOLO_LSD_KEY, (string)ALL, "All or Solo Board");
+                linksetDataWrite(SOLO_LSD_KEY, (string)ALL, "All or Solo Board");
             } else if (message == "SOLO") {
                 ALL = FALSE;
-                linksetDataWrite(toucher, SOLO_LSD_KEY, (string)ALL, "All or Solo Board");
+                linksetDataWrite(SOLO_LSD_KEY, (string)ALL, "All or Solo Board");
             } else if (message == "GROUP") {
                 if (id == owner) {
                     if (ALL) {
@@ -896,7 +964,7 @@ state menu {
                         llRegionSay(objChannel, "Group");
                     }
                     GROUP = TRUE;
-                    linksetDataWrite(NULL_KEY, GROUP_LSD_KEY, (string)GROUP, "Group Access");
+                    linksetDataWrite(GROUP_LSD_KEY, (string)GROUP, "Group Access");
                 } else {
                     if (id) llRegionSayTo(id, 0, "Only the owner can set the Boards to group access");
                 }
@@ -907,7 +975,7 @@ state menu {
                         llRegionSay(objChannel, "Owner");
                     }
                     GROUP = FALSE;
-                    linksetDataWrite(NULL_KEY, GROUP_LSD_KEY, (string)GROUP, "Group Access");
+                    linksetDataWrite(GROUP_LSD_KEY, (string)GROUP, "Group Access");
                 } else {
                     if (id) llRegionSayTo(id, 0, "Only the owner can set the Boards to owner only");
                 }
@@ -1039,10 +1107,10 @@ state text
         vector scale_vector;
         if (message == "ALL") {
             ALL = TRUE;
-            linksetDataWrite(toucher, SOLO_LSD_KEY, (string)ALL, "All or Solo Board");
+            linksetDataWrite(SOLO_LSD_KEY, (string)ALL, "All or Solo Board");
         } else if (message == "SOLO") {
             ALL = FALSE;
-            linksetDataWrite(toucher, SOLO_LSD_KEY, (string)ALL, "All or Solo Board");
+            linksetDataWrite(SOLO_LSD_KEY, (string)ALL, "All or Solo Board");
         } else if (message == "FLIP HORIZ") {
             // Flips the texture horizontally on selected face, keeping vertical scale
             scale_vector = llGetTextureScale(side_one);
@@ -1059,7 +1127,7 @@ state text
                 llSetTexture(linksetValue, side_one);
             } else {
                 llSetTexture(front_texture, side_one);
-                linksetDataWrite(owner, ORIGTEXT_LSD_KEY, front_texture, "Original Board Textures");
+                linksetDataWrite(ORIGTEXT_LSD_KEY, front_texture, "Original Board Textures");
             }
         } else if (message == "BACK") {
             state menu;
@@ -1114,26 +1182,124 @@ state text
     }
 }
 
-state warn
-{
+state amts {
     state_entry() {
-        integer warnChannel = -999999;
-        llListenRemove(warnHandle);
-        warnHandle = llListen(warnChannel, "", toucher, "");
-
-        llDialog(toucher, "\nSelect a face to texture first\n", ["OK"], warnChannel);
-        llSetTimerEvent(30.0); // 30-second timer
+        first_amt      = -1;
+        second_amt     = -1;
+        third_amt      = -1;
+        fourth_amt     = -1;
+        default_amt    = -1;
+        displayAmtsMenu();
     }
 
     listen(integer channel, string name, key id, string message) {
-        llSetTimerEvent(0.0);       // Stop timer
-        llListenRemove(warnHandle); // Remove listener
-        state text;
+        if (message == "DONE") {
+            if (ALL) {
+                // Send the message to other boards in region with same owner listening on this channel
+                llRegionSay(objChannel, "Donation Stop");
+            }
+            linksetDataWrite(PAY_AMTS_LSD_KEY, llList2CSV(quick_pay), "Pay Buttons Amounts");
+            linksetDataWrite(DEF_PAY_LSD_KEY, (string)deflt_pay, "Default Pay Amount");
+            if (boardStatus) {
+                state donate;
+            } else {
+                state idle;
+            }
+        } else if (message == "ALL") {
+            ALL = TRUE;
+            linksetDataWrite(SOLO_LSD_KEY, (string)ALL, "All or Solo Board");
+        } else if (message == "SOLO") {
+            ALL = FALSE;
+            linksetDataWrite(SOLO_LSD_KEY, (string)ALL, "All or Solo Board");
+        } else if (message == "BUTTON 1") {
+            first_amt = -1;
+        } else if (message == "BUTTON 2") {
+            second_amt = -1;
+        } else if (message == "BUTTON 3") {
+            third_amt = -1;
+        } else if (message == "BUTTON 4") {
+            fourth_amt = -1;
+        } else if (message == "DEFAULT") {
+            default_amt = -1;
+        } else if (message == "OWNER") {
+            if (id == owner) {
+                if (ALL) {
+                    // Send the message to other objects in region with same owner listening on this channel
+                    llRegionSay(objChannel, "Owner");
+                }
+                GROUP = FALSE;
+                linksetDataWrite(GROUP_LSD_KEY, (string)GROUP, "Group Access");
+            } else {
+                if (id) llRegionSayTo(id, 0, "Only the owner can set the Boards to owner only");
+            }
+        } else if (message == "BOARD NAME") {
+            if (inputListen != -1) llListenRemove(inputListen);
+            inputListen = llListen(inputChannel, "", id, "");
+            llSetTimerEvent(LISTEN_TTL);
+            llTextBox(id, "\nEnter the Donation Board name into the box)", inputChannel);
+            return; // Exit the listen event
+        } else if (message == "TEXTURE") {
+            state text;
+        } else if (message == "EXIT") {
+            if (boardStatus) {
+                state donate;
+            } else {
+                state idle;
+            }
+        } else {
+            if (first_amt == -1) {
+                if (message == "SKIP") {
+                    first_amt = llList2Integer(quick_pay, 0);
+                } else {
+                    quick_pay = llListReplaceList(quick_pay, [message], 0, 0);
+                    first_amt = llList2Integer(quick_pay, 0);
+                }
+            } else if (second_amt == -1) {
+                if (message == "SKIP") {
+                    second_amt = llList2Integer(quick_pay, 1);
+                } else {
+                    quick_pay = llListReplaceList(quick_pay, [message], 1, 1);
+                    second_amt = llList2Integer(quick_pay, 1);
+                }
+            } else if (third_amt == -1) {
+                if (message == "SKIP") {
+                    third_amt = llList2Integer(quick_pay, 2);
+                } else {
+                    quick_pay = llListReplaceList(quick_pay, [message], 2, 2);
+                    third_amt = llList2Integer(quick_pay, 2);
+                }
+            } else if (fourth_amt == -1) {
+                if (message == "SKIP") {
+                    fourth_amt = llList2Integer(quick_pay, 3);
+                } else {
+                    quick_pay = llListReplaceList(quick_pay, [message], 3, 3);
+                    fourth_amt = llList2Integer(quick_pay, 3);
+                }
+            } else if (default_amt == -1) {
+                if (message == "SKIP") {
+                    default_amt = deflt_pay;
+                } else {
+                    deflt_pay = (integer)message;
+                    default_amt = deflt_pay;
+                }
+            }
+            linksetDataWrite(PAY_AMTS_LSD_KEY, llList2CSV(quick_pay), "Pay Buttons Amounts");
+            linksetDataWrite(DEF_PAY_LSD_KEY, (string)deflt_pay, "Default Pay Amount");
+        }
+        // Re-send the dialog to keep the menu open
+        displayAmtsMenu();
     }
 
     timer() {
-        llSetTimerEvent(0.0);       // Stop timer
-        llListenRemove(warnHandle); // Remove listener
-        state text;
+        if (inputListen != -1) { llListenRemove(inputListen); inputListen = -1; }
+        llSetTimerEvent(0.0);
+        // Return to the donation state
+        state donate;
+    }
+
+    state_exit() {
+        setDatastoreValues();
+        llSetTimerEvent(0);
     }
 }
+
