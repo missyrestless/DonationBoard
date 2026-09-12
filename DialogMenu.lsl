@@ -264,7 +264,7 @@ displayAmtsMenu() {
     menuMessage += "\nCurrent Default Amount: " + (string)deflt_pay;
     menuMessage += "\nSet Donation Amounts on THIS BOARD ONLY\n";
     if (first_amt == -1) {
-        menuMessage += "\nSelect first (lowest) donation amount1\n";
+        menuMessage += "\nSelect first (lowest) donation amount\n";
         amts_menu += ["10", "20", "50", "100", "250", "500", "750", "SKIP"];
     } else if (second_amt == -1) {
         menuMessage += "\nSelect second donation amount\n";
@@ -774,6 +774,7 @@ state amts {
             } else {
                 llMessageLinked(LINK_THIS, SND_LM_IDLE, "", owner);
             }
+            state default;
         } else if (message == "BUTTON 1") {
             first_amt = -1;
         } else if (message == "BUTTON 2") {
