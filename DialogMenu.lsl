@@ -22,7 +22,8 @@
 integer  boardStatus;           // TRUE if board active, FALSE if board is disabled
 integer  dialogChannel;         // Dialog Menu channel and handle
 integer  dialogHandle;
-integer  inputChannel;          // Input Box channel
+integer  inputChannel;          // Board name Input Box channel
+integer  shareChannel;          // Share percent Input Box channel
 integer  pageNumber    = 1;
 integer  first_amt     = -1;    // Pay button amounts
 integer  second_amt    = -1;
@@ -36,6 +37,7 @@ integer  particles     = TRUE;
 integer  ALL           = TRUE;  // Set to TRUE to effect all boards, FALSE for single board
 integer  GROUP         = FALSE; // Set to TRUE to allow group members to manage, FALSE for owner only
 
+integer  tipSplit      = 0;     // % shared
 integer  deflt_pay     = 250;   // Default donation amount
 list     quick_pay     = [100, 250, 500, 1000]; // quick pay buttons
 
@@ -79,6 +81,7 @@ integer RCV_LM_MENU        = 100;
 integer RCV_LM_GROUP       = 150;
 integer RCV_LM_STATUS_ON   = 200;
 integer RCV_LM_STATUS_OFF  = 210;
+integer RCV_LM_SHARE       = 250;
 
 // Link Messages to Donation Board
 integer SND_LM_ALL         = 10;
@@ -90,10 +93,12 @@ integer SND_LM_GROUP       = 50;
 integer SND_LM_OBJMSG      = 60;
 integer SND_LM_HOVER       = 70;
 integer SND_LM_PROFILE     = 80;
+integer SND_LM_SHARE       = 90;
 //
 // Dialog Menu & listener for Webhook URL management
 float   LISTEN_TTL      = 60.0;                
 integer inputListen     = -1;
+integer shareListen     = -1;
 
 // Frame style and textures
 string  profilePic     = "";
@@ -121,6 +126,22 @@ list getTextures() {
         texture_list += llGetInventoryName(INVENTORY_TEXTURE, i);
     }
     return texture_list;
+}
+
+// Removes elements of a list less than a minimum value
+list trimList(list input_list, integer min_value) {
+    integer i = llGetListLength(input_list) - 1;
+
+    // Loop backwards through the list
+    for (; i >= 0; --i) {
+        // Check if the current item is less than the minimum
+        if (llList2Integer(input_list, i) < min_value) {
+            // Delete the item from the list
+            input_list = llDeleteSubList(input_list, i, i);
+        }
+    }
+
+    return input_list;
 }
 
 list arrange(list l) {
@@ -194,6 +215,7 @@ displayMainMenu() {
     }
     menuMessage += "\nAMOUNTS = Set the donation amounts for the pay dialog";
     menuMessage += "\nNAME = Set the Board name hover text";
+    menuMessage += "\nSHARE = Set the Board donation share percent";
     menuMessage += "\nTEXTURE = Open the Board texture menu";
     if (boardStatus) {
         main_menu = ["STOP", "INFO"];
@@ -212,7 +234,7 @@ displayMainMenu() {
     } else {
         main_menu += ["GROUP"];
     }
-    main_menu += ["AMOUNTS", "NAME", "TEXTURE", "EXIT"];
+    main_menu += ["AMOUNTS", "NAME", "SHARE", "TEXTURE", "EXIT"];
     showMenu(menuMessage, main_menu);
 }
 
@@ -265,19 +287,22 @@ displayAmtsMenu() {
     menuMessage += "\nSet Donation Amounts on THIS BOARD ONLY\n";
     if (first_amt == -1) {
         menuMessage += "\nSelect first (lowest) donation amount\n";
-        amts_menu += ["10", "20", "50", "100", "250", "500", "750", "SKIP"];
+        amts_menu = ["10", "20", "50", "100", "250", "500", "750", "SKIP"];
     } else if (second_amt == -1) {
         menuMessage += "\nSelect second donation amount\n";
-        amts_menu += ["50", "100", "250", "300", "500", "750", "1000", "SKIP"];
+        amts_menu = [trimList(["50", "100", "250", "300", "500", "750", "1000"], first_amt)];
+        amts_menu += ["SKIP"];
     } else if (third_amt == -1) {
         menuMessage += "\nSelect third donation amount\n";
-        amts_menu += ["150", "250", "300", "500", "750", "1000", "1500", "SKIP"];
+        amts_menu = [trimList(["150", "250", "300", "500", "750", "1000", "1500"], second_amt)];
+        amts_menu += ["SKIP"];
     } else if (fourth_amt == -1) {
         menuMessage += "\nSelect fourth donation amount\n";
-        amts_menu += ["150", "200", "250", "500", "750", "1000", "1500", "SKIP"];
+        amts_menu = [trimList(["200", "250", "500", "750", "1000", "1500", "2000"], third_amt)];
+        amts_menu += ["SKIP"];
     } else if (default_amt == -1) {
         menuMessage += "\nSelect default donation amount\n";
-        amts_menu += [llList2String(quick_pay, 0), llList2String(quick_pay, 1), llList2String(quick_pay, 2), llList2String(quick_pay, 3), "SKIP"];
+        amts_menu = [llList2String(quick_pay, 0), llList2String(quick_pay, 1), llList2String(quick_pay, 2), llList2String(quick_pay, 3), "SKIP"];
     } else {
         menuMessage += "\nClick DONE to save these pay buttons values\n";
         menuMessage += "\nClick a BUTTON button to change that button's value\n";
@@ -339,6 +364,11 @@ getDatastoreValues() {
     if (linksetValue != "") {
         quick_pay = llCSV2List(linksetValue);
     }
+    // Owner share percent
+    linksetValue = llLinksetDataRead(SHARE_LSD_KEY);
+    if (linksetValue != "") {
+        tipSplit = (integer)linksetValue;
+    }
 }
 
 setDatastoreValues() {
@@ -359,6 +389,8 @@ setDatastoreValues() {
     linksetDataWrite(DEF_PAY_LSD_KEY, (string)deflt_pay, "Default Pay Amount");
     // Pay dialog button amounts
     linksetDataWrite(PAY_AMTS_LSD_KEY, llList2CSV(quick_pay), "Pay Buttons Amounts");
+    // Owner share percent
+    linksetDataWrite(SHARE_LSD_KEY, (string)tipSplit, "Owner donation percent");
 }
 
 // Writes the provided key/value pair to the prim's linkset datastore
@@ -486,6 +518,7 @@ default {
         // Compute a negative communications channel based on prim UUID
         dialogChannel = 0x80000000 | (integer) ( "0x" + (string) llGetKey() );
         inputChannel  = (integer)(llFrand(-1000000000.0) - 1000000000.0);
+        shareChannel  = (integer)(llFrand(-1000000000.0) - 1000000000.0);
     }
 
     touch_start(integer num_detected) {
@@ -543,6 +576,8 @@ default {
             } else if (message == "Owner") {
                 GROUP = FALSE;
             }
+        } else if (num == RCV_LM_SHARE) {
+            tipSplit = (integer)message;
         } else if (num == RCV_LM_STATUS_ON) {
             boardStatus = TRUE;
         } else if (num == RCV_LM_STATUS_OFF) {
@@ -576,6 +611,12 @@ state menu {
             } else if (message == "Owner") {
                 GROUP = FALSE;
             }
+        } else if (num == RCV_LM_SHARE) {
+            tipSplit = (integer)message;
+        } else if (num == RCV_LM_STATUS_ON) {
+            boardStatus = TRUE;
+        } else if (num == RCV_LM_STATUS_OFF) {
+            boardStatus = FALSE;
         }
     }
 
@@ -589,6 +630,16 @@ state menu {
             if (inputListen != -1) {
                 llListenRemove(inputListen);
                 inputListen = -1;
+            }
+        } else if (channel == shareChannel) {
+            tipSplit = (integer)message;
+            linksetDataWrite(SHARE_LSD_KEY, message, "Owner donation percent");
+
+            llMessageLinked(LINK_THIS, SND_LM_SHARE, message, "");
+
+            if (shareListen != -1) {
+                llListenRemove(shareListen);
+                shareListen = -1;
             }
         } else {
             if (message == "STOP") {
@@ -627,7 +678,13 @@ state menu {
                 if (inputListen != -1) llListenRemove(inputListen);
                 inputListen = llListen(inputChannel, "", id, "");
                 llSetTimerEvent(LISTEN_TTL);
-                llTextBox(id, "\nEnter the Donation Board name into the box)", inputChannel);
+                llTextBox(id, "\nEnter the Donation Board name into the box", inputChannel);
+                return; // Exit the listen event
+            } else if (message == "SHARE") {
+                if (shareListen != -1) llListenRemove(shareListen);
+                shareListen = llListen(shareChannel, "", id, "");
+                llSetTimerEvent(LISTEN_TTL);
+                llTextBox(id, "\nEnter the share percent into the box (" + (string)tipSplit + "%)", shareChannel);
                 return; // Exit the listen event
             } else if (message == "TEXTURE") {
                 state text;
@@ -641,6 +698,7 @@ state menu {
 
     timer() {
         if (inputListen != -1) { llListenRemove(inputListen); inputListen = -1; }
+        if (shareListen != -1) { llListenRemove(shareListen); shareListen = -1; }
         llSetTimerEvent(0.0);
         // Return to the donation state
         llMessageLinked(LINK_THIS, SND_LM_DONATE, "", owner);
@@ -667,6 +725,12 @@ state text {
             } else if (message == "Owner") {
                 GROUP = FALSE;
             }
+        } else if (num == RCV_LM_SHARE) {
+            tipSplit = (integer)message;
+        } else if (num == RCV_LM_STATUS_ON) {
+            boardStatus = TRUE;
+        } else if (num == RCV_LM_STATUS_OFF) {
+            boardStatus = FALSE;
         }
     }
 
@@ -762,6 +826,12 @@ state amts {
             } else if (message == "Owner") {
                 GROUP = FALSE;
             }
+        } else if (num == RCV_LM_SHARE) {
+            tipSplit = (integer)message;
+        } else if (num == RCV_LM_STATUS_ON) {
+            boardStatus = TRUE;
+        } else if (num == RCV_LM_STATUS_OFF) {
+            boardStatus = FALSE;
         }
     }
 
@@ -854,6 +924,7 @@ state amts {
 
     timer() {
         if (inputListen != -1) { llListenRemove(inputListen); inputListen = -1; }
+        if (shareListen != -1) { llListenRemove(shareListen); shareListen = -1; }
         llSetTimerEvent(0.0);
         // Return to the donation state
         llMessageLinked(LINK_THIS, SND_LM_DONATE, "", owner);

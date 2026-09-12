@@ -35,9 +35,8 @@ integer  listenChannel  = 0;   // Channel for chat and gestures
  
 integer  LoggedIn       = FALSE;
 integer  pageNumber     = 1;   // Dialog Menu page number
-integer  oneSplit       = 100; // % given to owner if nobody logged in
-integer  twoSplit       =  80; // % given to owner if group member logged in
-integer  tipSplit       = 100; // % given to owner
+integer  twoSplit       = 80;  // % shared if group member logged in
+integer  tipSplit       = 0;   // % shared
 integer  totalDonations = 0;
 integer  side_one       = 0;   // Face number for front of board
 integer  side_two       = 5;   // Face number for back of board
@@ -106,6 +105,7 @@ integer SND_LM_MENU        = 100;
 integer SND_LM_GROUP       = 150;
 integer SND_LM_STATUS_ON   = 200;
 integer SND_LM_STATUS_OFF  = 210;
+integer SND_LM_SHARE       = 250;
 // Receive from Dialog Menu
 integer RCV_LM_ALL         = 10;
 integer RCV_LM_SOLO        = 15;
@@ -116,6 +116,7 @@ integer RCV_LM_GROUP       = 50;
 integer RCV_LM_OBJMSG      = 60;
 integer RCV_LM_HOVER       = 70;
 integer RCV_LM_PROFILE     = 80;
+integer RCV_LM_SHARE       = 90;
 
 stopDonation() {
     llSetClickAction(CLICK_ACTION_TOUCH);
@@ -267,13 +268,17 @@ acceptDonation(key id, integer amount) {
 readyForDonations(key recKey) {
     current = recKey;
     Name = llKey2Name(current);
-    LoggedIn = TRUE;
-    tipSplit = twoSplit;
-
-    // llSetText("Truth & Beauty Beach, " + Name + " \nDonations Welcome!", <0.5,1.0,0.5>, 1.0);
-    llInstantMessage(current, "You are now logged in.");
-    llSetTimerEvent(checkInterval);
+    if (current == owner) {
+        LoggedIn = FALSE;
+        tipSplit = 0;
+    } else {
+        LoggedIn = TRUE;
+        tipSplit = twoSplit;
+        llInstantMessage(current, "You are now logged in.");
+        llSetTimerEvent(checkInterval);
+    }
     getProfilePic(current);
+    llMessageLinked(LINK_THIS, SND_LM_SHARE, (string)tipSplit, "");
 }
 
 getDatastoreValues() {
@@ -346,7 +351,7 @@ getDatastoreValues() {
         if (LoggedIn) {
             tipSplit = twoSplit;
         } else {
-            tipSplit = oneSplit;
+            tipSplit = 0;
         }
     }
 }
@@ -447,9 +452,10 @@ checkGone(key avatar) {
     if (distance > maxDistance) {
         llInstantMessage(avatar, "You were too far from the donation board and have been logged out.");
         LoggedIn = FALSE;
-        tipSplit = oneSplit;
+        tipSplit = 0;
         current = owner;
         Name = llKey2Name(current);
+        llMessageLinked(LINK_THIS, SND_LM_SHARE, (string)tipSplit, "");
         getProfilePic(current);
         llSetTimerEvent(0.0);
     }
@@ -469,7 +475,7 @@ setLoggedIn() {
         llSetTimerEvent(checkInterval);
     } else if (toucher == current) {
         LoggedIn = FALSE;
-        tipSplit = oneSplit;
+        tipSplit = 0;
         current = owner;
         Name = llKey2Name(current);
         getProfilePic(current);
@@ -479,6 +485,7 @@ setLoggedIn() {
     } else {
         llInstantMessage(toucher, "A DJ is already logged in.");
     }
+    llMessageLinked(LINK_THIS, SND_LM_SHARE, (string)tipSplit, "");
 }
 
 particlesOff() {
@@ -652,12 +659,8 @@ default {
     }
 
     link_message(integer sender, integer num, string message, key id) {
-        if (ALL) {
-            // Send the message to other boards in region with same owner listening on this channel
-            if (message != "") {
-                llRegionSay(objChannel, message);
-            }
-        }
+        // Message to send to other boards
+        string msg = message;
 
         if (num == RCV_LM_ALL) {
             ALL = TRUE;
@@ -688,6 +691,22 @@ default {
             updateHoverText();
         } else if (num == RCV_LM_PROFILE) {
             getProfilePic(current);
+        } else if (num == RCV_LM_SHARE) {
+            twoSplit = (integer)message;
+            if (LoggedIn) {
+                tipSplit = twoSplit;
+            } else {
+                tipSplit = 0;
+            }
+            // Do not send a message to other boards
+            msg = "";
+        }
+
+        if (ALL) {
+            // Send the message to other boards in region with same owner listening on this channel
+            if (msg != "") {
+                llRegionSay(objChannel, msg);
+            }
         }
     }
 
@@ -784,12 +803,8 @@ state donate {
     }
 
     link_message(integer sender, integer num, string message, key id) {
-        if (ALL) {
-            // Send the message to other boards in region with same owner listening on this channel
-            if (message != "") {
-                llRegionSay(objChannel, message);
-            }
-        }
+        // Message to send to other boards
+        string msg = message;
 
         if (num == RCV_LM_ALL) {
             ALL = TRUE;
@@ -815,6 +830,26 @@ state donate {
                 GROUP = TRUE;
             } else if (message == "Owner") {
                 GROUP = FALSE;
+            }
+        } else if (num == RCV_LM_HOVER) {
+            updateHoverText();
+        } else if (num == RCV_LM_PROFILE) {
+            getProfilePic(current);
+        } else if (num == RCV_LM_SHARE) {
+            twoSplit = (integer)message;
+            if (LoggedIn) {
+                tipSplit = twoSplit;
+            } else {
+                tipSplit = 0;
+            }
+            // Do not send a message to other boards
+            msg = "";
+        }
+
+        if (ALL) {
+            // Send the message to other boards in region with same owner listening on this channel
+            if (msg != "") {
+                llRegionSay(objChannel, msg);
             }
         }
     }
@@ -892,12 +927,8 @@ state idle {
     }
 
     link_message(integer sender, integer num, string message, key id) {
-        if (ALL) {
-            // Send the message to other boards in region with same owner listening on this channel
-            if (message != "") {
-                llRegionSay(objChannel, message);
-            }
-        }
+        // Message to send to other boards
+        string msg = message;
 
         if (num == RCV_LM_ALL) {
             ALL = TRUE;
@@ -923,6 +954,26 @@ state idle {
                 GROUP = TRUE;
             } else if (message == "Owner") {
                 GROUP = FALSE;
+            }
+        } else if (num == RCV_LM_HOVER) {
+            updateHoverText();
+        } else if (num == RCV_LM_PROFILE) {
+            getProfilePic(current);
+        } else if (num == RCV_LM_SHARE) {
+            twoSplit = (integer)message;
+            if (LoggedIn) {
+                tipSplit = twoSplit;
+            } else {
+                tipSplit = 0;
+            }
+            // Do not send a message to other boards
+            msg = "";
+        }
+
+        if (ALL) {
+            // Send the message to other boards in region with same owner listening on this channel
+            if (msg != "") {
+                llRegionSay(objChannel, msg);
             }
         }
     }
