@@ -234,7 +234,11 @@ displayMainMenu() {
     } else {
         main_menu += ["GROUP"];
     }
-    main_menu += ["AMOUNTS", "NAME", "SHARE", "TEXTURE", "EXIT"];
+    if (toucher == owner) {
+        main_menu += ["AMOUNTS", "NAME", "SHARE", "TEXTURE", "EXIT"];
+    } else {
+        main_menu += ["AMOUNTS", "NAME", "TEXTURE", "EXIT"];
+    }
     showMenu(menuMessage, main_menu);
 }
 
