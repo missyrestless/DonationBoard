@@ -24,8 +24,8 @@ The Truth &amp; Beauty Donation Board includes the following features:
     - Select from any of the several textures provided to customize
     - Drag and drop any texture into the prim Contents to add that texture to the dialog menu Texture options
 - A particle display is emitted when rezzed/reset and when a donation is made
-- The `DonationBoard` LSL script is low lag and has been optimized with `PyOptimizer`
-- The `DonationBoard` script is Open Source and can be viewed, copied, and modified freely within the terms of the license
+- The `DonationBoard` and `DialogMenu` LSL scripts are low lag and have been optimized with `PyOptimizer`
+- The `DonationBoard` and `DialogMenu` scripts are Open Source and can be viewed, copied, and modified freely within the terms of the license
 
 ## Marketplace
 

@@ -17,5 +17,6 @@ make
   mkdir -p ${DEST}
 
   cp DonationBoard.lslo ${DEST}/DonationBoard
+  cp DialogMenu.lslo ${DEST}/DialogMenu
   cp COPYRIGHT LICENSE VERSION ${DEST}
 }

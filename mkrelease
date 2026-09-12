@@ -54,6 +54,7 @@ gh release create v${VERSION} ${DRAFT} \
                   --target "${BRANCH}" \
                   --notes-file README.md \
                   DonationBoard.lslo \
+                  DialogMenu.lslo \
                   ${PRODUCT}-${VERSION}.tar.gz
 
 git fetch --tags origin
