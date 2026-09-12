@@ -193,7 +193,7 @@ displayMainMenu() {
         menuMessage += "\nGROUP = Allow group members to manage";
     }
     menuMessage += "\nAMOUNTS = Set the donation amounts for the pay dialog";
-    menuMessage += "\nBOARD NAME = Set the Board name hover text";
+    menuMessage += "\nNAME = Set the Board name hover text";
     menuMessage += "\nTEXTURE = Open the Board texture menu";
     if (boardStatus) {
         main_menu = ["STOP", "INFO"];
@@ -212,7 +212,7 @@ displayMainMenu() {
     } else {
         main_menu += ["GROUP"];
     }
-    main_menu += ["AMOUNTS", "BOARD NAME", "TEXTURE", "EXIT"];
+    main_menu += ["AMOUNTS", "NAME", "TEXTURE", "EXIT"];
     showMenu(menuMessage, main_menu);
 }
 
@@ -260,39 +260,28 @@ displayAmtsMenu() {
     list amts_menu = [];
 
     menuMessage = "\nTruth & Beauty Donation Board " + boardVersion;
-    menuMessage = "\nCurrent Pay Buttons: " + llDumpList2String(quick_pay, ", ");
-    menuMessage = "\nCurrent Default Amount: " + (string)deflt_pay;
-    if (ALL) {
-        menuMessage += "\nSet Donation Amounts on ALL BOARDS IN REGION\n";
-        menuMessage += "\nSOLO = Set donation amounts on only this board";
-    } else {
-        menuMessage += "\nSet Donation Amounts on THIS BOARD ONLY\n";
-        menuMessage += "\nALL = Set donation amounts on all boards in region";
-    }
+    menuMessage += "\nCurrent Pay Buttons: " + llDumpList2String(quick_pay, ", ");
+    menuMessage += "\nCurrent Default Amount: " + (string)deflt_pay;
+    menuMessage += "\nSet Donation Amounts on THIS BOARD ONLY\n";
     if (first_amt == -1) {
-        menuMessage += "\nSelect first (lowest) donation amount for Pay Button 1\n";
+        menuMessage += "\nSelect first (lowest) donation amount1\n";
         amts_menu += ["10", "20", "50", "100", "250", "500", "750", "SKIP"];
     } else if (second_amt == -1) {
-        menuMessage += "\nSelect second donation amount for Pay Button 2\n";
+        menuMessage += "\nSelect second donation amount\n";
         amts_menu += ["50", "100", "250", "300", "500", "750", "1000", "SKIP"];
     } else if (third_amt == -1) {
-        menuMessage += "\nSelect third donation amount for Pay Button 3\n";
+        menuMessage += "\nSelect third donation amount\n";
         amts_menu += ["150", "250", "300", "500", "750", "1000", "1500", "SKIP"];
     } else if (fourth_amt == -1) {
-        menuMessage += "\nSelect fourth donation amount for Pay Button 4\n";
+        menuMessage += "\nSelect fourth donation amount\n";
         amts_menu += ["150", "200", "250", "500", "750", "1000", "1500", "SKIP"];
     } else if (default_amt == -1) {
         menuMessage += "\nSelect default donation amount\n";
-        amts_menu += ["10", "20", "50", "100", "250", "300", "500", "SKIP"];
+        amts_menu += [llList2String(quick_pay, 0), llList2String(quick_pay, 1), llList2String(quick_pay, 2), llList2String(quick_pay, 3), "SKIP"];
     } else {
         menuMessage += "\nClick DONE to save these pay buttons values\n";
         menuMessage += "\nClick a BUTTON button to change that button's value\n";
         amts_menu += ["BUTTON 1", "BUTTON 2", "BUTTON 3", "BUTTON 4", "DEFAULT"];
-    }
-    if (ALL) {
-        amts_menu += ["SOLO"];
-    } else {
-        amts_menu += ["ALL"];
     }
     amts_menu += ["DONE", "EXIT"];
     showMenu(menuMessage, amts_menu);
@@ -634,7 +623,7 @@ state menu {
                 } else {
                     if (id) llRegionSayTo(id, 0, "Only the owner can set the Boards to owner only");
                 }
-            } else if (message == "BOARD NAME") {
+            } else if (message == "NAME") {
                 if (inputListen != -1) llListenRemove(inputListen);
                 inputListen = llListen(inputChannel, "", id, "");
                 llSetTimerEvent(LISTEN_TTL);
@@ -643,8 +632,7 @@ state menu {
             } else if (message == "TEXTURE") {
                 state text;
             } else if (message == "EXIT") {
-                // Return to the donation state
-                llMessageLinked(LINK_THIS, SND_LM_DONATE, "", id);
+                state default;
             }
         }
         // Re-send the dialog to keep the menu open
@@ -724,6 +712,7 @@ state text {
             } else {
                 llMessageLinked(LINK_THIS, SND_LM_IDLE, "", owner);
             }
+            state default;
         } else {
             if (llGetInventoryType(message) == INVENTORY_TEXTURE) {
                 llSetTexture(message, side_one);
@@ -785,14 +774,6 @@ state amts {
             } else {
                 llMessageLinked(LINK_THIS, SND_LM_IDLE, "", owner);
             }
-        } else if (message == "ALL") {
-            ALL = TRUE;
-            linksetDataWrite(SOLO_LSD_KEY, (string)ALL, "All or Solo Board");
-            llMessageLinked(LINK_THIS, SND_LM_ALL, "", owner);
-        } else if (message == "SOLO") {
-            ALL = FALSE;
-            linksetDataWrite(SOLO_LSD_KEY, (string)ALL, "All or Solo Board");
-            llMessageLinked(LINK_THIS, SND_LM_SOLO, "", owner);
         } else if (message == "BUTTON 1") {
             first_amt = -1;
         } else if (message == "BUTTON 2") {
@@ -811,7 +792,7 @@ state amts {
             } else {
                 if (id) llRegionSayTo(id, 0, "Only the owner can set the Boards to owner only");
             }
-        } else if (message == "BOARD NAME") {
+        } else if (message == "NAME") {
             if (inputListen != -1) llListenRemove(inputListen);
             inputListen = llListen(inputChannel, "", id, "");
             llSetTimerEvent(LISTEN_TTL);
@@ -825,6 +806,7 @@ state amts {
             } else {
                 llMessageLinked(LINK_THIS, SND_LM_IDLE, "", owner);
             }
+            state default;
         } else {
             if (first_amt == -1) {
                 if (message == "SKIP") {
