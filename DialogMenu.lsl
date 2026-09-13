@@ -345,7 +345,8 @@ default {
             boardStatus = TRUE;
         } else if (num == RCV_LM_STATUS_OFF) {
             llSetClickAction(CLICK_ACTION_TOUCH);
-            llSetPayPrice(PAY_HIDE, [PAY_HIDE ,PAY_HIDE, PAY_HIDE, PAY_HIDE]);
+            // llSetPayPrice(PAY_HIDE, [PAY_HIDE ,PAY_HIDE, PAY_HIDE, PAY_HIDE]);
+            llSetPayPrice(deflt_pay, quick_pay);
             boardStatus = FALSE;
         }
     }
@@ -384,7 +385,8 @@ state menu {
             boardStatus = TRUE;
         } else if (num == RCV_LM_STATUS_OFF) {
             llSetClickAction(CLICK_ACTION_TOUCH);
-            llSetPayPrice(PAY_HIDE, [PAY_HIDE ,PAY_HIDE, PAY_HIDE, PAY_HIDE]);
+            // llSetPayPrice(PAY_HIDE, [PAY_HIDE ,PAY_HIDE, PAY_HIDE, PAY_HIDE]);
+            llSetPayPrice(deflt_pay, quick_pay);
             boardStatus = FALSE;
         }
     }
@@ -502,7 +504,8 @@ state text {
             boardStatus = TRUE;
         } else if (num == RCV_LM_STATUS_OFF) {
             llSetClickAction(CLICK_ACTION_TOUCH);
-            llSetPayPrice(PAY_HIDE, [PAY_HIDE ,PAY_HIDE, PAY_HIDE, PAY_HIDE]);
+            // llSetPayPrice(PAY_HIDE, [PAY_HIDE ,PAY_HIDE, PAY_HIDE, PAY_HIDE]);
+            llSetPayPrice(deflt_pay, quick_pay);
             boardStatus = FALSE;
         }
     }
@@ -600,7 +603,8 @@ state amts {
             boardStatus = TRUE;
         } else if (num == RCV_LM_STATUS_OFF) {
             llSetClickAction(CLICK_ACTION_TOUCH);
-            llSetPayPrice(PAY_HIDE, [PAY_HIDE ,PAY_HIDE, PAY_HIDE, PAY_HIDE]);
+            // llSetPayPrice(PAY_HIDE, [PAY_HIDE ,PAY_HIDE, PAY_HIDE, PAY_HIDE]);
+            llSetPayPrice(deflt_pay, quick_pay);
             boardStatus = FALSE;
         }
     }
@@ -614,7 +618,8 @@ state amts {
                 llSetPayPrice(deflt_pay, quick_pay);
             } else {
                 llSetClickAction(CLICK_ACTION_TOUCH);
-                llSetPayPrice(PAY_HIDE, [PAY_HIDE ,PAY_HIDE, PAY_HIDE, PAY_HIDE]);
+                // llSetPayPrice(PAY_HIDE, [PAY_HIDE ,PAY_HIDE, PAY_HIDE, PAY_HIDE]);
+                llSetPayPrice(deflt_pay, quick_pay);
             }
             llMessageLinked(LINK_THIS, SND_LM_READ_AMTS, "", "");
             state default;

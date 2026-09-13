@@ -130,7 +130,8 @@ updateHoverText() {
 stopDonation() {
     llSetClickAction(CLICK_ACTION_TOUCH);
     // llOwnerSay("Hiding Pay Buttons");
-    llSetPayPrice(PAY_HIDE, [PAY_HIDE ,PAY_HIDE, PAY_HIDE, PAY_HIDE]);
+    // llSetPayPrice(PAY_HIDE, [PAY_HIDE ,PAY_HIDE, PAY_HIDE, PAY_HIDE]);
+    llSetPayPrice(deflt_pay, quick_pay);
     boardStatus = FALSE;
     updateHoverText();
     llMessageLinked(LINK_THIS, SND_LM_STATUS_OFF, "", owner);
