@@ -1,4 +1,3 @@
-//// Truth & Beauty Donation Board Dialog Menu ////
 //                                               //
 //  Provides dialog menus for the Truth & Beauty //
 //  Donation Board. Messaging with the main      //
@@ -32,8 +31,7 @@ integer  fourth_amt    = -1;
 integer  default_amt   = -1;
 integer  side_one      = 0;     // Face number for front of board
 integer  side_two      = 5;     // Face number for back of board
-integer  inDialogMenu  = FALSE;
-integer  particles     = TRUE;
+
 integer  ALL           = TRUE;  // Set to TRUE to effect all boards, FALSE for single board
 integer  GROUP         = FALSE; // Set to TRUE to allow group members to manage, FALSE for owner only
 
@@ -99,14 +97,6 @@ integer SND_LM_SHARE       = 90;
 float   LISTEN_TTL      = 60.0;                
 integer inputListen     = -1;
 integer shareListen     = -1;
-
-// Frame style and textures
-string  profilePic     = "";
-string  ProfileTexture = "";
-
-// Should online status messages be restricted to owner
-integer ownerOnly = TRUE;
-string pageMenuName;
 
 // Keys
 key owner       = NULL_KEY;
@@ -413,108 +403,6 @@ integer linksetDataWrite(string lsdKey, string value, string cfg) {
     return returnCode;
 }
 
-particlesOff() {
-    llParticleSystem([]);
-}
-
-bling() {
-    particlesOff();
-    llParticleSystem([
-        PSYS_PART_FLAGS, (0
-                           | PSYS_PART_INTERP_COLOR_MASK
-                           | PSYS_PART_EMISSIVE_MASK
-                           | PSYS_PART_INTERP_SCALE_MASK
-                           | PSYS_PART_FOLLOW_VELOCITY_MASK
-                           | PSYS_PART_WIND_MASK
-                         ),
-        PSYS_SRC_PATTERN, PSYS_SRC_PATTERN_EXPLODE,
-
-        // Color Parameters
-        PSYS_PART_START_COLOR,     <1.0, 0.5, 0.0>, // Bright Orange
-        PSYS_PART_END_COLOR,       <0.0, 0.0, 1.0>, // Fades to Blue
-
-        // Transparency
-        PSYS_PART_START_ALPHA,     1.0,
-        PSYS_PART_END_ALPHA,       0.2,
-
-        // Size
-        PSYS_PART_START_SCALE,     <0.5, 0.5, 0.0>,
-        PSYS_PART_END_SCALE,       <2.0, 2.0, 0.0>,
-
-        // Timing & Speed
-        PSYS_PART_MAX_AGE,         3.0,
-        PSYS_SRC_BURST_RATE,       0.5,
-        PSYS_SRC_BURST_PART_COUNT, 2,
-        PSYS_SRC_BURST_SPEED_MIN,  1.0,
-        PSYS_SRC_BURST_SPEED_MAX,  3.0
-    ]);
-}
-
-hearts() {
-    particlesOff();
-    llParticleSystem([
-        PSYS_SRC_TEXTURE, "5b3f3df0-b20b-5dc4-b49e-377c5805a0e3",
-        PSYS_PART_START_SCALE,     <0.1, 0.1, FALSE>,
-        PSYS_PART_END_SCALE,       <0.4, 0.4, FALSE>,
-        PSYS_PART_START_ALPHA,     1.0,
-        PSYS_PART_END_ALPHA,       0.5,
-
-        PSYS_SRC_BURST_PART_COUNT, 2,
-        PSYS_SRC_BURST_RATE,       0.5,
-        PSYS_PART_MAX_AGE,         2.0,
-        PSYS_SRC_MAX_AGE,          0.0,
-
-        PSYS_SRC_PATTERN,          2,
-        PSYS_SRC_BURST_SPEED_MIN,  0.5,
-        PSYS_SRC_BURST_SPEED_MAX,  2.0,
-        PSYS_SRC_BURST_RADIUS,     0.000000,
-
-        PSYS_SRC_ANGLE_BEGIN,      0.05*PI,
-        PSYS_SRC_ANGLE_END,        0.05*PI,
-        PSYS_SRC_OMEGA,            <0.0, 0.0, 0.0>,
-
-        PSYS_SRC_ACCEL,            <0.0, 0.0, 0.0>,
-        PSYS_SRC_TARGET_KEY,       (key)"",
-
-        PSYS_PART_FLAGS, ( 0
-                             | PSYS_PART_INTERP_COLOR_MASK
-                             | PSYS_PART_INTERP_SCALE_MASK
-                             | PSYS_PART_EMISSIVE_MASK
-                             | PSYS_PART_FOLLOW_VELOCITY_MASK
-                             | PSYS_PART_WIND_MASK
-                         )
-    ]);
-}
-
-sparkle() {
-    particlesOff();
-    llParticleSystem([
-        PSYS_PART_START_SCALE,     <0.00, 0.20, 0>,
-        PSYS_PART_END_SCALE,       <0.40, 0.00, 0>,
-        PSYS_PART_START_COLOR,     <0.5, 1.0, 0.0>,
-        PSYS_PART_END_COLOR,       <0.0, 0.0, 1.0>,
-        PSYS_PART_START_ALPHA,     1.0,
-        PSYS_PART_END_ALPHA,       0.2,
-        PSYS_SRC_BURST_PART_COUNT, 2,
-        PSYS_SRC_BURST_RATE,       0.05,
-        PSYS_PART_MAX_AGE,         0.30,
-        PSYS_SRC_MAX_AGE,          0.00,
-        PSYS_SRC_PATTERN,          8,
-        PSYS_SRC_BURST_SPEED_MIN,  00.10,
-        PSYS_SRC_BURST_SPEED_MAX,  00.10,
-        PSYS_SRC_BURST_RADIUS,     00.50,
-        PSYS_SRC_ANGLE_BEGIN,      0.00 *PI,
-        PSYS_SRC_ANGLE_END,        1.00 *PI,
-        PSYS_SRC_OMEGA,            <00.00, 00.00, 00.00>,
-        PSYS_SRC_ACCEL,            <00.00, 00.00, -00.10>,
-        PSYS_PART_FLAGS, (integer) ( 0
-                                      | PSYS_PART_INTERP_COLOR_MASK
-                                      | PSYS_PART_INTERP_SCALE_MASK
-                                      | PSYS_PART_EMISSIVE_MASK
-                                   )
-    ]);
-}
-
 default {
     state_entry() {
         owner         = llGetOwner();
@@ -527,45 +415,19 @@ default {
 
     touch_start(integer num_detected) {
         toucher = llDetectedKey(0);
-        // Ensure only the owner or group members triggers the timer start check
         if (GROUP) {
             if ((llDetectedGroup(0)) || (toucher == owner)) {
-                llResetTime(); // Starts tracking duration
+                state menu;
             } else {
                 howtoPay();
                 toucher = NULL_KEY;
             }
         } else {
             if (toucher == owner) {
-                llResetTime(); // Starts tracking duration
+                state menu;
             } else {
                 howtoPay();
                 toucher = NULL_KEY;
-            }
-        }
-    }
-
-    touch_end(integer num_detected) {
-        float holdTime = llGetTime();
-        if (GROUP) {
-            if ((llDetectedGroup(0)) || (toucher == owner)) {
-                if (holdTime >= 1.0) {
-                    // Long press for dialog menu
-                    // Handle dialog menu in its own state
-                    state menu;
-                } else {
-                    llMessageLinked(LINK_THIS, SND_LM_DONATE, "", toucher);
-                }
-            }
-        } else {
-            if (toucher == owner) {
-                if (holdTime >= 1.0) {
-                    // Long press for dialog menu
-                    // Handle dialog menu in its own state
-                    state menu;
-                } else {
-                    llMessageLinked(LINK_THIS, SND_LM_DONATE, "", toucher);
-                }
             }
         }
     }
@@ -645,7 +507,7 @@ state menu {
                 llListenRemove(shareListen);
                 shareListen = -1;
             }
-        } else {
+        } else if (channel == dialogChannel) {
             if (message == "STOP") {
                 llMessageLinked(LINK_THIS, SND_LM_IDLE, "Donation Stop", owner);
             } else if (message == "START") {
@@ -704,8 +566,7 @@ state menu {
         if (inputListen != -1) { llListenRemove(inputListen); inputListen = -1; }
         if (shareListen != -1) { llListenRemove(shareListen); shareListen = -1; }
         llSetTimerEvent(0.0);
-        // Return to the donation state
-        llMessageLinked(LINK_THIS, SND_LM_DONATE, "", owner);
+        state default;
     }
 
     state_exit() {
@@ -774,12 +635,6 @@ state text {
         } else if (message == "Next >>>") {
             pageNumber++;
         } else if (message == "EXIT") {
-            // Return to the previous state
-            if (boardStatus) {
-                llMessageLinked(LINK_THIS, SND_LM_DONATE, "", id);
-            } else {
-                llMessageLinked(LINK_THIS, SND_LM_IDLE, "", owner);
-            }
             state default;
         } else {
             if (llGetInventoryType(message) == INVENTORY_TEXTURE) {
@@ -794,12 +649,8 @@ state text {
     }
 
     timer() {
-        // Return to the previous state
-        if (boardStatus) {
-            llMessageLinked(LINK_THIS, SND_LM_DONATE, "", owner);
-        } else {
-            llMessageLinked(LINK_THIS, SND_LM_IDLE, "", owner);
-        }
+        llSetTimerEvent(0.0);
+        state default;
     }
 
     state_exit() {
@@ -843,11 +694,6 @@ state amts {
         if (message == "DONE") {
             linksetDataWrite(PAY_AMTS_LSD_KEY, llList2CSV(quick_pay), "Pay Buttons Amounts");
             linksetDataWrite(DEF_PAY_LSD_KEY, (string)deflt_pay, "Default Pay Amount");
-            if (boardStatus) {
-                llMessageLinked(LINK_THIS, SND_LM_DONATE, "", id);
-            } else {
-                llMessageLinked(LINK_THIS, SND_LM_IDLE, "", owner);
-            }
             state default;
         } else if (message == "BUTTON 1") {
             first_amt = -1;
@@ -876,11 +722,6 @@ state amts {
         } else if (message == "TEXTURE") {
             state text;
         } else if (message == "EXIT") {
-            if (boardStatus) {
-                llMessageLinked(LINK_THIS, SND_LM_DONATE, "", id);
-            } else {
-                llMessageLinked(LINK_THIS, SND_LM_IDLE, "", owner);
-            }
             state default;
         } else {
             if (first_amt == -1) {
@@ -930,8 +771,7 @@ state amts {
         if (inputListen != -1) { llListenRemove(inputListen); inputListen = -1; }
         if (shareListen != -1) { llListenRemove(shareListen); shareListen = -1; }
         llSetTimerEvent(0.0);
-        // Return to the donation state
-        llMessageLinked(LINK_THIS, SND_LM_DONATE, "", owner);
+        state default;
     }
 
     state_exit() {

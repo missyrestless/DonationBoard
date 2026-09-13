@@ -28,13 +28,10 @@ integer  ALL     = TRUE;      // Set to TRUE to effect all boards, FALSE for sin
 integer  GROUP   = FALSE;     // Set to TRUE to allow group members to manage, FALSE for owner only
 integer  listenerID;
 integer  objListenID;
-integer  warnHandle;
-integer  dialogChannel;
 integer  objChannel;           // Channel for communication between screens, based on owner
 integer  listenChannel  = 0;   // Channel for chat and gestures
  
 integer  LoggedIn       = FALSE;
-integer  pageNumber     = 1;   // Dialog Menu page number
 integer  twoSplit       = 80;  // % shared if group member logged in
 integer  tipSplit       = 0;   // % shared
 integer  totalDonations = 0;
@@ -46,21 +43,15 @@ integer  boardStatus;          // TRUE if board active, FALSE if board is disabl
 
 integer  deflt_pay      = 250; // Default donation amount
 list     quick_pay      = [100, 250, 500, 1000]; // quick pay buttons
+list     deftextures;
 
-float    maxTime        = 3600.0;
 float    checkInterval  = 30.0;
 float    maxDistance    = 15.0;
 
-key      setupUser;
 key      current;
 key      profileRequestID;
 key      owner;
 key      toucher = NULL_KEY;
-
-list     sides;
-list     deftextures;
-list     tipNames;
-list     tipAmounts;
 
 string   Name = "";
 string   VERT_SPACE = "\n \n \n \n \n \n \n ";
@@ -185,7 +176,6 @@ getDefaultTextures() {
     integer i;
     integer faces = llGetNumberOfSides();
     for (i = 0; i < faces; i++) {
-        sides += i;
         deftextures += llGetTexture(i);
     }
 }
@@ -461,7 +451,6 @@ checkGone(key avatar) {
     }
 }
 
-// TODO: fix hover text settings
 setLoggedIn() {
     if (!LoggedIn) {
         current = toucher;
@@ -612,34 +601,12 @@ default {
         listenerID = llListen(listenChannel, "", owner, "");
         llListenRemove(objListenID);
         objListenID = llListen(objChannel, "", NULL_KEY, "");
-        // Compute a negative communications channel based on prim UUID
-        dialogChannel = 0x80000000 | (integer) ( "0x" + (string) llGetKey() );
 
         sparkle();
         particles_on = TRUE;
         llSetTimerEvent(10);
 
         llRequestPermissions(owner, PERMISSION_DEBIT);
-    }
-
-    touch_start(integer num_detected) {
-        toucher = llDetectedKey(0);
-        // Ensure only the owner or group members triggers the timer start check
-        if (GROUP) {
-            if ((llDetectedGroup(0)) || (toucher == owner)) {
-                if (toucher == owner) {
-                    current = owner;
-                } else {
-                    setLoggedIn();
-                }
-            } else {
-                toucher = NULL_KEY;
-            }
-        } else {
-            if (toucher != owner) {
-                toucher = NULL_KEY;
-            }
-        }
     }
 
     run_time_permissions(integer perms) {
@@ -688,6 +655,9 @@ default {
                 GROUP = FALSE;
             }
         } else if (num == RCV_LM_HOVER) {
+            boardName = message;
+            // Do not send a message to other boards
+            msg = "";
             updateHoverText();
         } else if (num == RCV_LM_PROFILE) {
             getProfilePic(current);
@@ -832,6 +802,9 @@ state donate {
                 GROUP = FALSE;
             }
         } else if (num == RCV_LM_HOVER) {
+            boardName = message;
+            // Do not send a message to other boards
+            msg = "";
             updateHoverText();
         } else if (num == RCV_LM_PROFILE) {
             getProfilePic(current);
@@ -956,6 +929,9 @@ state idle {
                 GROUP = FALSE;
             }
         } else if (num == RCV_LM_HOVER) {
+            boardName = message;
+            // Do not send a message to other boards
+            msg = "";
             updateHoverText();
         } else if (num == RCV_LM_PROFILE) {
             getProfilePic(current);
