@@ -36,7 +36,6 @@ integer  twoSplit       = 80;  // % shared if group member logged in
 integer  tipSplit       = 0;   // % shared
 integer  totalDonations = 0;
 integer  side_one       = 0;   // Face number for front of board
-integer  side_two       = 5;   // Face number for back of board
 integer  particles_on   = FALSE;
 integer  randParticle   = 0;
 integer  boardStatus;          // TRUE if board active, FALSE if board is disabled
@@ -53,11 +52,10 @@ key      profileRequestID;
 key      owner;
 key      toucher = NULL_KEY;
 
-string   Name = "";
 string   VERT_SPACE = "\n \n \n \n \n \n \n ";
 string   boardName;
+string   customName = "";
 string   front_texture;
-string   back_texture;
 string   orig_texture;
 string   linksetValue;
 
@@ -72,8 +70,6 @@ string  PAY_UUID_LSD_KEY   = "payment_uuid";
 string  TOTAL_AMT_LSD_KEY  = "total_donations";
 // Front face texture linkset data key
 string  FRONT_LSD_KEY      = "front_texture";
-// Back face texture linkset data key
-string  BACK_LSD_KEY       = "back_texture";
 // Actions effect only this board or all boards
 string  SOLO_LSD_KEY       = "solo";
 // Group access to board menu or owner only
@@ -103,23 +99,49 @@ integer RCV_LM_SOLO        = 15;
 integer RCV_LM_DONATE      = 20;
 integer RCV_LM_IDLE        = 30;
 integer RCV_LM_INFO        = 40;
+integer RCV_LM_DATA_WRITE  = 45;
+integer RCV_LM_FRONT_TEXT  = 48;
 integer RCV_LM_GROUP       = 50;
 integer RCV_LM_OBJMSG      = 60;
 integer RCV_LM_HOVER       = 70;
 integer RCV_LM_PROFILE     = 80;
 integer RCV_LM_SHARE       = 90;
+integer RCV_LM_READ_AMTS   = 95;
+
+updateHoverText() {
+    string text = boardName + " Donation Board\n";
+    vector color;
+
+    if (boardStatus) {
+        if (totalDonations > 0) {
+            text += (string)totalDonations + " L$ donated so far!";
+        } else {
+            text += "Empty - Be the first to donate!";
+        }
+        color = <0.0, 1.0, 0.0>; // Green hover text
+    } else {
+        text += "Inactive, temporarily unavailable";
+        color = <1.0, 1.0, 0.0>; // Yellow hover text
+    }
+    text += VERT_SPACE;
+    llSetText(text, color, 1.0); // Green hover text
+}
 
 stopDonation() {
     llSetClickAction(CLICK_ACTION_TOUCH);
+    // llOwnerSay("Hiding Pay Buttons");
     llSetPayPrice(PAY_HIDE, [PAY_HIDE ,PAY_HIDE, PAY_HIDE, PAY_HIDE]);
     boardStatus = FALSE;
+    updateHoverText();
     llMessageLinked(LINK_THIS, SND_LM_STATUS_OFF, "", owner);
 }
 
 startDonation() {
     llSetClickAction(CLICK_ACTION_PAY);
+    // llOwnerSay("Pay Default: " + (string)deflt_pay + " Buttons: " + llDumpList2String(quick_pay, ", "));
     llSetPayPrice(deflt_pay, quick_pay);
     boardStatus = TRUE;
+    updateHoverText();
     llMessageLinked(LINK_THIS, SND_LM_STATUS_ON, "", owner);
 }
 
@@ -147,15 +169,8 @@ stateDonation() {
     }
 }
 
-updateHoverText() {
-    string text = boardName + " Donation Board\n";
-    if (totalDonations > 0) {
-        text += (string)totalDonations + " L$ donated so far!";
-    } else {
-        text += "Empty - Be the first to donate!";
-    }
-    text += VERT_SPACE;
-    llSetText(text, <0.0, 1.0, 0.0>, 1.0); // Green hover text
+howtoPay() {
+    llInstantMessage(toucher, "Please right-click the Donation Board and select 'Pay' to make a donation.");
 }
 
 string getBoardSlurl() {
@@ -257,7 +272,11 @@ acceptDonation(key id, integer amount) {
 
 readyForDonations(key recKey) {
     current = recKey;
-    Name = llKey2Name(current);
+    if (customName == "") {
+        boardName = llKey2Name(current);
+    } else {
+        boardName = customName;
+    }
     if (current == owner) {
         LoggedIn = FALSE;
         tipSplit = 0;
@@ -298,13 +317,6 @@ getDatastoreValues() {
         front_texture = linksetValue;
     } else {
         front_texture = llGetTexture(side_one);
-    }
-    // Back face texture linkset data key
-    linksetValue = llLinksetDataRead(BACK_LSD_KEY);
-    if (linksetValue != "") {
-        back_texture = linksetValue;
-    } else {
-        back_texture = llGetTexture(side_two);
     }
     // Original texture linkset data key
     linksetValue = llLinksetDataRead(ORIGTEXT_LSD_KEY);
@@ -359,9 +371,7 @@ setDatastoreValues() {
     // Total amount received linkset data key
     linksetDataWrite(TOTAL_AMT_LSD_KEY, (string)totalDonations, "Total amount donated");
     // Front face texture linkset data key
-    linksetDataWrite(FRONT_LSD_KEY, (string)front_texture, "Front Side Texture");
-    // Back face texture linkset data key
-    linksetDataWrite(BACK_LSD_KEY, (string)back_texture, "Back Side Texture");
+    linksetDataWrite(FRONT_LSD_KEY, front_texture, "Front Side Texture");
     // Original face texture linkset data key
     linksetDataWrite(ORIGTEXT_LSD_KEY, (string)orig_texture, "Original Front Texture");
     // Solo or All linkset data key
@@ -444,7 +454,11 @@ checkGone(key avatar) {
         LoggedIn = FALSE;
         tipSplit = 0;
         current = owner;
-        Name = llKey2Name(current);
+        if (customName == "") {
+            boardName = llKey2Name(current);
+        } else {
+            boardName = customName;
+        }
         llMessageLinked(LINK_THIS, SND_LM_SHARE, (string)tipSplit, "");
         getProfilePic(current);
         llSetTimerEvent(0.0);
@@ -454,19 +468,23 @@ checkGone(key avatar) {
 setLoggedIn() {
     if (!LoggedIn) {
         current = toucher;
-        Name = llKey2Name(current);
+        boardName = llKey2Name(current);
         LoggedIn = TRUE;
         tipSplit = twoSplit;
         getProfilePic(current);
 
-        llSetText("🎧 DJ: " + Name + " 🎧\nTips Welcome!", <0.5,1.0,0.5>, 1.0);
+        llSetText("🎧 DJ: " + boardName + " 🎧\nTips Welcome!", <0.5,1.0,0.5>, 1.0);
         llInstantMessage(current, "You are now logged in as DJ.");
         llSetTimerEvent(checkInterval);
     } else if (toucher == current) {
         LoggedIn = FALSE;
         tipSplit = 0;
         current = owner;
-        Name = llKey2Name(current);
+        if (customName == "") {
+            boardName = llKey2Name(current);
+        } else {
+            boardName = customName;
+        }
         getProfilePic(current);
         llSetText("🎶 Touch to Login as DJ 🎶", <1,1,1>, 1.0);
         llInstantMessage(toucher, "You have logged out.");
@@ -612,16 +630,32 @@ default {
     run_time_permissions(integer perms) {
         // If Debit permissions are granted, set up the pay price for this single-price vendor
         if (perms & PERMISSION_DEBIT) {
-            llSetClickAction(CLICK_ACTION_PAY);
-            updateHoverText();
             llOwnerSay("Donation Board is ready and online.");
             readyForDonations(owner);
-            startDonation();
             state donate;
         } else {
             llOwnerSay("⚠️ This script needs debit permissions to send money.");
             stopDonation();
             llMessageLinked(LINK_THIS, SND_LM_MENU, "", owner);
+        }
+    }
+
+    touch_start(integer num_detected) {
+        toucher = llDetectedKey(0);
+        if (GROUP) {
+            if ((llDetectedGroup(0)) || (toucher == owner)) {
+                llMessageLinked(LINK_THIS, SND_LM_MENU, "", toucher);
+            } else {
+                howtoPay();
+                toucher = NULL_KEY;
+            }
+        } else {
+            if (toucher == owner) {
+                llMessageLinked(LINK_THIS, SND_LM_MENU, "", toucher);
+            } else {
+                howtoPay();
+                toucher = NULL_KEY;
+            }
         }
     }
 
@@ -641,13 +675,16 @@ default {
                 setLoggedIn();
             }
             readyForDonations(current);
-            startDonation();
             state donate;
         } else if (num == RCV_LM_IDLE) {
-            stopDonation();
             state idle;
         } else if (num == RCV_LM_INFO) {
             stateDonation();
+        } else if (num == RCV_LM_DATA_WRITE) {
+            setDatastoreValues();
+        } else if (num == RCV_LM_FRONT_TEXT) {
+            front_texture = message;
+            linksetDataWrite(FRONT_LSD_KEY, front_texture, "Front Side Texture");
         } else if (num == RCV_LM_GROUP) {
             if (message == "Group") {
                 GROUP = TRUE;
@@ -656,6 +693,7 @@ default {
             }
         } else if (num == RCV_LM_HOVER) {
             boardName = message;
+            customName = boardName;
             // Do not send a message to other boards
             msg = "";
             updateHoverText();
@@ -670,6 +708,17 @@ default {
             }
             // Do not send a message to other boards
             msg = "";
+        } else if (num == RCV_LM_READ_AMTS) {
+            // Default Pay dialog amount
+            linksetValue = llLinksetDataRead(DEF_PAY_LSD_KEY);
+            if (linksetValue != "") {
+                deflt_pay = (integer)linksetValue;
+            }
+            // Pay dialog button amounts
+            linksetValue = llLinksetDataRead(PAY_AMTS_LSD_KEY);
+            if (linksetValue != "") {
+                quick_pay = llCSV2List(linksetValue);
+            }
         }
 
         if (ALL) {
@@ -754,7 +803,6 @@ state donate {
 
     touch_start(integer num_detected) {
         toucher = llDetectedKey(0);
-        // Ensure only the owner or group members triggers the timer start check
         if (GROUP) {
             if ((llDetectedGroup(0)) || (toucher == owner)) {
                 if (toucher == owner) {
@@ -764,10 +812,16 @@ state donate {
                 }
                 readyForDonations(current);
                 startDonation();
+            } else {
+                howtoPay();
+                toucher = NULL_KEY;
             }
         } else {
             if (toucher == owner) {
                 llMessageLinked(LINK_THIS, SND_LM_MENU, "", toucher);
+            } else {
+                howtoPay();
+                toucher = NULL_KEY;
             }
         }
     }
@@ -791,10 +845,14 @@ state donate {
             startDonation();
             state donate;
         } else if (num == RCV_LM_IDLE) {
-            stopDonation();
             state idle;
         } else if (num == RCV_LM_INFO) {
             stateDonation();
+        } else if (num == RCV_LM_DATA_WRITE) {
+            setDatastoreValues();
+        } else if (num == RCV_LM_FRONT_TEXT) {
+            front_texture = message;
+            linksetDataWrite(FRONT_LSD_KEY, front_texture, "Front Side Texture");
         } else if (num == RCV_LM_GROUP) {
             if (message == "Group") {
                 GROUP = TRUE;
@@ -803,6 +861,7 @@ state donate {
             }
         } else if (num == RCV_LM_HOVER) {
             boardName = message;
+            customName = boardName;
             // Do not send a message to other boards
             msg = "";
             updateHoverText();
@@ -880,7 +939,6 @@ state idle {
 
     touch_start(integer num_detected) {
         toucher = llDetectedKey(0);
-        // Ensure only the owner or group members triggers the timer start check
         if (GROUP) {
             if ((llDetectedGroup(0)) || (toucher == owner)) {
                 llMessageLinked(LINK_THIS, SND_LM_MENU, "", toucher);
@@ -915,13 +973,16 @@ state idle {
                 setLoggedIn();
             }
             readyForDonations(current);
-            startDonation();
             state donate;
         } else if (num == RCV_LM_IDLE) {
-            stopDonation();
             state idle;
         } else if (num == RCV_LM_INFO) {
             stateDonation();
+        } else if (num == RCV_LM_DATA_WRITE) {
+            setDatastoreValues();
+        } else if (num == RCV_LM_FRONT_TEXT) {
+            front_texture = message;
+            linksetDataWrite(FRONT_LSD_KEY, front_texture, "Front Side Texture");
         } else if (num == RCV_LM_GROUP) {
             if (message == "Group") {
                 GROUP = TRUE;
@@ -930,6 +991,7 @@ state idle {
             }
         } else if (num == RCV_LM_HOVER) {
             boardName = message;
+            customName = boardName;
             // Do not send a message to other boards
             msg = "";
             updateHoverText();

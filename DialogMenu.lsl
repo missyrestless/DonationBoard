@@ -30,7 +30,6 @@ integer  third_amt     = -1;
 integer  fourth_amt    = -1;
 integer  default_amt   = -1;
 integer  side_one      = 0;     // Face number for front of board
-integer  side_two      = 5;     // Face number for back of board
 
 integer  ALL           = TRUE;  // Set to TRUE to effect all boards, FALSE for single board
 integer  GROUP         = FALSE; // Set to TRUE to allow group members to manage, FALSE for owner only
@@ -42,7 +41,6 @@ list     quick_pay     = [100, 250, 500, 1000]; // quick pay buttons
 string  boardName;
 string  boardVersion;
 string  front_texture;
-string  back_texture;
 string  linksetValue;
 string  menuMessage;
 
@@ -57,8 +55,6 @@ string  PAY_UUID_LSD_KEY   = "payment_uuid";
 string  TOTAL_AMT_LSD_KEY  = "total_donations";
 // Front face texture linkset data key
 string  FRONT_LSD_KEY      = "front_texture";
-// Back face texture linkset data key
-string  BACK_LSD_KEY       = "back_texture";
 // Actions effect only this board or all boards
 string  SOLO_LSD_KEY       = "solo";
 // Group access to board menu or owner only
@@ -87,11 +83,14 @@ integer SND_LM_SOLO        = 15;
 integer SND_LM_DONATE      = 20;
 integer SND_LM_IDLE        = 30;
 integer SND_LM_INFO        = 40;
+integer SND_LM_DATA_WRITE  = 45;
+integer SND_LM_FRONT_TEXT  = 48;
 integer SND_LM_GROUP       = 50;
 integer SND_LM_OBJMSG      = 60;
 integer SND_LM_HOVER       = 70;
 integer SND_LM_PROFILE     = 80;
 integer SND_LM_SHARE       = 90;
+integer SND_LM_READ_AMTS   = 95;
 //
 // Dialog Menu & listener for Webhook URL management
 float   LISTEN_TTL      = 60.0;                
@@ -101,10 +100,6 @@ integer shareListen     = -1;
 // Keys
 key owner       = NULL_KEY;
 key toucher     = NULL_KEY;
-
-howtoPay() {
-    llInstantMessage(toucher, "Please right-click the Donation Board and select 'Pay' to make a donation.");
-}
 
 list getTextures() {
     list texture_list = [];
@@ -203,7 +198,7 @@ displayMainMenu() {
     } else {
         menuMessage += "\nGROUP = Allow group members to manage";
     }
-    menuMessage += "\nAMOUNTS = Set the donation amounts for the pay dialog";
+    menuMessage += "\nAMOUNTS = pay dialog suggested amounts";
     menuMessage += "\nNAME = Set the Board name hover text";
     menuMessage += "\nSHARE = Set the Board donation share percent";
     menuMessage += "\nTEXTURE = Open the Board texture menu";
@@ -306,87 +301,6 @@ displayAmtsMenu() {
     showMenu(menuMessage, amts_menu);
 }
 
-getDatastoreValues() {
-    //
-    // Retrieve any configuration values stored in the linkset datastore
-    //
-    // Donation Board Version
-    linksetValue = llLinksetDataRead(VERSION_LSD_KEY);
-    if (linksetValue != "") {
-        boardVersion = linksetValue;
-    } else {
-        boardVersion = "Unknown";
-    }
-    // Donation Board Name
-    linksetValue = llLinksetDataRead(BOARD_NAME_LSD_KEY);
-    if (linksetValue != "") {
-        boardName = linksetValue;
-    } else {
-        boardName = llKey2Name(owner);
-    }
-    // Front face texture linkset data key
-    linksetValue = llLinksetDataRead(FRONT_LSD_KEY);
-    if (linksetValue != "") {
-        front_texture = linksetValue;
-    } else {
-        front_texture = llGetTexture(side_one);
-    }
-    // Back face texture linkset data key
-    linksetValue = llLinksetDataRead(BACK_LSD_KEY);
-    if (linksetValue != "") {
-        back_texture = linksetValue;
-    } else {
-        back_texture = llGetTexture(side_two);
-    }
-    // Solo or All linkset data key
-    linksetValue = llLinksetDataRead(SOLO_LSD_KEY);
-    if (linksetValue != "") {
-        ALL = (integer)linksetValue;
-    }
-    // Group or Owner access linkset data key
-    linksetValue = llLinksetDataRead(GROUP_LSD_KEY);
-    if (linksetValue != "") {
-        GROUP = (integer)linksetValue;
-    }
-    // Default Pay dialog amount
-    linksetValue = llLinksetDataRead(DEF_PAY_LSD_KEY);
-    if (linksetValue != "") {
-        deflt_pay = (integer)linksetValue;
-    }
-    // Pay dialog button amounts
-    linksetValue = llLinksetDataRead(PAY_AMTS_LSD_KEY);
-    if (linksetValue != "") {
-        quick_pay = llCSV2List(linksetValue);
-    }
-    // Owner share percent
-    linksetValue = llLinksetDataRead(SHARE_LSD_KEY);
-    if (linksetValue != "") {
-        tipSplit = (integer)linksetValue;
-    }
-}
-
-setDatastoreValues() {
-    //
-    // Set all configuration values stored in the linkset datastore
-    //
-    // Donation Board Name
-    linksetDataWrite(BOARD_NAME_LSD_KEY, boardName, "Donation Board Name");
-    // Front face texture linkset data key
-    linksetDataWrite(FRONT_LSD_KEY, (string)front_texture, "Front Side Texture");
-    // Back face texture linkset data key
-    linksetDataWrite(BACK_LSD_KEY, (string)back_texture, "Back Side Texture");
-    // Solo or All linkset data key
-    linksetDataWrite(SOLO_LSD_KEY, (string)ALL, "Solo or All Boards");
-    // Group or Owner access linkset data key
-    linksetDataWrite(GROUP_LSD_KEY, (string)GROUP, "Group or Owner access");
-    // Default Pay dialog amount
-    linksetDataWrite(DEF_PAY_LSD_KEY, (string)deflt_pay, "Default Pay Amount");
-    // Pay dialog button amounts
-    linksetDataWrite(PAY_AMTS_LSD_KEY, llList2CSV(quick_pay), "Pay Buttons Amounts");
-    // Owner share percent
-    linksetDataWrite(SHARE_LSD_KEY, (string)tipSplit, "Owner donation percent");
-}
-
 // Writes the provided key/value pair to the prim's linkset datastore
 integer linksetDataWrite(string lsdKey, string value, string cfg) {
     string val = llStringTrim(value, STRING_TRIM);
@@ -413,25 +327,6 @@ default {
         shareChannel  = (integer)(llFrand(-1000000000.0) - 1000000000.0);
     }
 
-    touch_start(integer num_detected) {
-        toucher = llDetectedKey(0);
-        if (GROUP) {
-            if ((llDetectedGroup(0)) || (toucher == owner)) {
-                state menu;
-            } else {
-                howtoPay();
-                toucher = NULL_KEY;
-            }
-        } else {
-            if (toucher == owner) {
-                state menu;
-            } else {
-                howtoPay();
-                toucher = NULL_KEY;
-            }
-        }
-    }
-
     link_message(integer sender, integer num, string message, key id) {
         if (num == RCV_LM_MENU) {
             toucher = id;
@@ -445,8 +340,12 @@ default {
         } else if (num == RCV_LM_SHARE) {
             tipSplit = (integer)message;
         } else if (num == RCV_LM_STATUS_ON) {
+            llSetClickAction(CLICK_ACTION_PAY);
+            llSetPayPrice(deflt_pay, quick_pay);
             boardStatus = TRUE;
         } else if (num == RCV_LM_STATUS_OFF) {
+            llSetClickAction(CLICK_ACTION_TOUCH);
+            llSetPayPrice(PAY_HIDE, [PAY_HIDE ,PAY_HIDE, PAY_HIDE, PAY_HIDE]);
             boardStatus = FALSE;
         }
     }
@@ -480,8 +379,12 @@ state menu {
         } else if (num == RCV_LM_SHARE) {
             tipSplit = (integer)message;
         } else if (num == RCV_LM_STATUS_ON) {
+            llSetClickAction(CLICK_ACTION_PAY);
+            llSetPayPrice(deflt_pay, quick_pay);
             boardStatus = TRUE;
         } else if (num == RCV_LM_STATUS_OFF) {
+            llSetClickAction(CLICK_ACTION_TOUCH);
+            llSetPayPrice(PAY_HIDE, [PAY_HIDE ,PAY_HIDE, PAY_HIDE, PAY_HIDE]);
             boardStatus = FALSE;
         }
     }
@@ -490,8 +393,7 @@ state menu {
         if (channel == inputChannel) {
             boardName = llStringTrim(message, STRING_TRIM);
             linksetDataWrite(BOARD_NAME_LSD_KEY, boardName, "Donation Board Name");
-
-            llMessageLinked(LINK_THIS, SND_LM_HOVER, boardName, id);
+            llMessageLinked(LINK_THIS, SND_LM_HOVER, boardName, "");
 
             if (inputListen != -1) {
                 llListenRemove(inputListen);
@@ -510,8 +412,10 @@ state menu {
         } else if (channel == dialogChannel) {
             if (message == "STOP") {
                 llMessageLinked(LINK_THIS, SND_LM_IDLE, "Donation Stop", owner);
+                boardStatus = FALSE;
             } else if (message == "START") {
                 llMessageLinked(LINK_THIS, SND_LM_DONATE, "Donation Start", id);
+                boardStatus = TRUE;
             } else if (message == "AMOUNTS") {
                 state amts;
             } else if (message == "INFO") {
@@ -570,7 +474,7 @@ state menu {
     }
 
     state_exit() {
-        setDatastoreValues();
+        llMessageLinked(LINK_THIS, SND_LM_DATA_WRITE, "", "");
         llSetTimerEvent(0);
     }
 }
@@ -593,8 +497,12 @@ state text {
         } else if (num == RCV_LM_SHARE) {
             tipSplit = (integer)message;
         } else if (num == RCV_LM_STATUS_ON) {
+            llSetClickAction(CLICK_ACTION_PAY);
+            llSetPayPrice(deflt_pay, quick_pay);
             boardStatus = TRUE;
         } else if (num == RCV_LM_STATUS_OFF) {
+            llSetClickAction(CLICK_ACTION_TOUCH);
+            llSetPayPrice(PAY_HIDE, [PAY_HIDE ,PAY_HIDE, PAY_HIDE, PAY_HIDE]);
             boardStatus = FALSE;
         }
     }
@@ -623,6 +531,8 @@ state text {
             linksetValue = llLinksetDataRead(ORIGTEXT_LSD_KEY);
             if (linksetValue != "") {
                 llSetTexture(linksetValue, side_one);
+                front_texture = linksetValue;
+                llMessageLinked(LINK_THIS, SND_LM_FRONT_TEXT, front_texture, "");
             } else {
                 llSetTexture(front_texture, side_one);
                 linksetDataWrite(ORIGTEXT_LSD_KEY, front_texture, "Original Board Textures");
@@ -639,6 +549,9 @@ state text {
         } else {
             if (llGetInventoryType(message) == INVENTORY_TEXTURE) {
                 llSetTexture(message, side_one);
+                front_texture = message;
+                llMessageLinked(LINK_THIS, SND_LM_FRONT_TEXT, message, "");
+                // Send the texture message to other boards listening on the object channel
                 llMessageLinked(LINK_THIS, SND_LM_OBJMSG, llList2Json(JSON_OBJECT, ["texture", message, "face", (string)side_one]), owner);
             } else {
                 llRegionSayTo(toucher, 0, "The texture is missing or not a texture: " + message);
@@ -654,9 +567,7 @@ state text {
     }
 
     state_exit() {
-        front_texture = llGetTexture(side_one);
-        back_texture = llGetTexture(side_two);
-        setDatastoreValues();
+        llMessageLinked(LINK_THIS, SND_LM_DATA_WRITE, "", "");
         llSetTimerEvent(0);
     }
 }
@@ -684,8 +595,12 @@ state amts {
         } else if (num == RCV_LM_SHARE) {
             tipSplit = (integer)message;
         } else if (num == RCV_LM_STATUS_ON) {
+            llSetClickAction(CLICK_ACTION_PAY);
+            llSetPayPrice(deflt_pay, quick_pay);
             boardStatus = TRUE;
         } else if (num == RCV_LM_STATUS_OFF) {
+            llSetClickAction(CLICK_ACTION_TOUCH);
+            llSetPayPrice(PAY_HIDE, [PAY_HIDE ,PAY_HIDE, PAY_HIDE, PAY_HIDE]);
             boardStatus = FALSE;
         }
     }
@@ -694,6 +609,14 @@ state amts {
         if (message == "DONE") {
             linksetDataWrite(PAY_AMTS_LSD_KEY, llList2CSV(quick_pay), "Pay Buttons Amounts");
             linksetDataWrite(DEF_PAY_LSD_KEY, (string)deflt_pay, "Default Pay Amount");
+            if (boardStatus) {
+                llSetClickAction(CLICK_ACTION_PAY);
+                llSetPayPrice(deflt_pay, quick_pay);
+            } else {
+                llSetClickAction(CLICK_ACTION_TOUCH);
+                llSetPayPrice(PAY_HIDE, [PAY_HIDE ,PAY_HIDE, PAY_HIDE, PAY_HIDE]);
+            }
+            llMessageLinked(LINK_THIS, SND_LM_READ_AMTS, "", "");
             state default;
         } else if (message == "BUTTON 1") {
             first_amt = -1;
@@ -775,7 +698,7 @@ state amts {
     }
 
     state_exit() {
-        setDatastoreValues();
+        llMessageLinked(LINK_THIS, SND_LM_DATA_WRITE, "", "");
         llSetTimerEvent(0);
     }
 }
