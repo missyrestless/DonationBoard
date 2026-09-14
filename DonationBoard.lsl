@@ -32,6 +32,7 @@ integer  objChannel;           // Channel for communication between screens, bas
 integer  listenChannel  = 0;   // Channel for chat and gestures
  
 integer  LoggedIn       = FALSE;
+integer  needInit       = TRUE; // Prim initialization is needed
 integer  showTotal      = TRUE;
 integer  twoSplit       = 80;  // % shared if group member logged in
 integer  tipSplit       = 0;   // % shared
@@ -53,9 +54,10 @@ key      profileRequestID;
 key      owner;
 key      toucher = NULL_KEY;
 
-string   VERT_SPACE = "\n \n \n \n \n \n \n ";
+string   VERT_SPACE  = "\n \n \n \n \n \n \n ";
+string   sideTexture = "Sides";
+string   customName  = "";
 string   boardName;
-string   customName = "";
 string   front_texture;
 string   orig_texture;
 string   linksetValue;
@@ -605,6 +607,46 @@ sparkle() {
     ]);
 }
 
+initPrim() {
+    integer i;
+    integer backFace = 5;
+    string  slurl    = getBoardSlurl();
+    string  parcel   = getParcelName();
+
+    owner = llGetOwner();
+
+    // Set default texture and glow of beveled sides and back
+    if (llGetInventoryType(sideTexture) == INVENTORY_TEXTURE) {
+        for (i = 1; i < backFace; i++) {
+            llSetTexture(sideTexture, i);
+            llSetPrimitiveParams([PRIM_GLOW, i, 0.1]);
+        }
+    }
+    // Set back transparent
+    llSetAlpha(0.0, backFace);
+    getDefaultTextures();
+
+    stopDonation();
+
+    llOwnerSay("The Truth & Beauty Donation Board located at " + slurl + " is now active.");
+    llOwnerSay("Activate the 'Start Donations', 'Stop Donations', and 'Donations Info' gestures in your inventory");
+    llOwnerSay("Once activated, saying '/paystart' in public chat will enable all donation boards you own in this region");
+    llOwnerSay("Saying '/paystop' will disable the donation boards");
+    llOwnerSay("Saying '/payinfo' will report their status, version, and locations");
+    llOwnerSay("Donation Board updates are free for life and will be available at:");
+    llOwnerSay("    https://github.com/missyrestless/DonationBoard/releases");
+    llOwnerSay("The latest Truth & Beauty Donation Board documentation can be found at:");
+    llOwnerSay("    https://github.com/missyrestless/DonationBoard#readme");
+
+    // Retrieve any stored configuration parameters from linkset datastore
+    // If not stored then use defaults
+    getDatastoreValues();
+    boardName = parcel + " Donation Board";
+    customName = boardName;
+    setDatastoreValues();
+    needInit = FALSE;
+}
+
 list csv2list(string csv) {
     list strList = llCSV2List(csv);
     list intList = [];
@@ -745,6 +787,11 @@ default {
         // Remove any previous hover text
         llSetText("", < 1.0, 1.0, 1.0>, 1.0);
 
+        // Set Prim face textures if not already set
+        if (needInit) {
+            initPrim();
+        }
+
         // Compute a large negative channel number based on the object owner
         // All boards owned by the same owner will use the same channel
         objChannel = 0x80000000 | (integer) ( "0x" + (string) owner );
@@ -842,43 +889,7 @@ default {
     }
 
     on_rez(integer num) {
-        string slurl = getBoardSlurl();
-        string parcel = getParcelName();
-        string sideTexture = "Sides";
-        integer backFace = 5;
-        integer i;
-
-        owner = llGetOwner();
-        stopDonation();
-
-        // Set default texture and glow of beveled sides and back
-        if (llGetInventoryType(sideTexture) == INVENTORY_TEXTURE) {
-            for (i = 1; i < backFace; i++) {
-                llSetTexture(sideTexture, i);
-                llSetPrimitiveParams([PRIM_GLOW, i, 0.1]);
-            }
-        }
-        // Set back transparent
-        llSetAlpha(0.0, backFace);
-        getDefaultTextures();
-
-        llOwnerSay("The Truth & Beauty Donation Board located at " + slurl + " is now active.");
-        llOwnerSay("Activate the 'Start Donations', 'Stop Donations', and 'Donations Info' gestures in your inventory");
-        llOwnerSay("Once activated, saying '/paystart' in public chat will enable all donation boards you own in this region");
-        llOwnerSay("Saying '/paystop' will disable the donation boards");
-        llOwnerSay("Saying '/payinfo' will report their status, version, and locations");
-        llOwnerSay("Donation Board updates are free for life and will be available at:");
-        llOwnerSay("    https://github.com/missyrestless/DonationBoard/releases");
-        llOwnerSay("The latest Truth & Beauty Donation Board documentation can be found at:");
-        llOwnerSay("    https://github.com/missyrestless/DonationBoard#readme");
-
-        // Retrieve any stored configuration parameters from linkset datastore
-        // If not stored then use defaults
-        getDatastoreValues();
-        boardName = parcel + " Donation Board";
-        customName = boardName;
-        setDatastoreValues();
-        llResetScript();
+        initPrim();
     }
 }
 
