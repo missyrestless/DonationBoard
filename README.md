@@ -60,7 +60,7 @@ The main menu includes the following buttons:
 - **OWNER**
     - Owner only access
 - **GROUP**
-    - Allow group members to manage the boards
+    - Allow group members to login/manage the boards
 - **CLEAR**
     - Clear all stored configuration and reset to original state
 - **HOVER TXT**
@@ -69,5 +69,7 @@ The main menu includes the following buttons:
     - Set the percentage of donation shared with logged in group member
 - **TEXTURE**
     - Open the Board texture menu
+- **TOTAL**
+    - Toggle display of total donations in hover text
 - **EXIT**
     - Exit the Dialog Menu

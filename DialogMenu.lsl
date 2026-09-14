@@ -34,7 +34,7 @@ integer  side_one      = 0;     // Face number for front of board
 integer  ALL           = TRUE;  // Set to TRUE to effect all boards, FALSE for single board
 integer  GROUP         = FALSE; // Set to TRUE to allow group members to manage, FALSE for owner only
 
-integer  LoggedIn;
+integer  loggedIn;
 integer  tipSplit      = 0;     // % shared
 integer  twoSplit      = 80;    // default % shared to logged in user
 integer  deflt_pay     = 250;   // Default donation amount
@@ -225,7 +225,7 @@ displayMainMenu() {
     } else {
         main_menu += ["GROUP"];
     }
-    if (LoggedIn) {
+    if (loggedIn) {
         main_menu += ["LOGOUT"];
     } else {
         main_menu += ["LOGIN"];
@@ -351,9 +351,9 @@ string lnk_msg(integer sender, integer num, string message, key id) {
         }
     } else if (num == RCV_LM_LOGIN) {
         if ((integer)message) {
-            LoggedIn = TRUE;
+            loggedIn = TRUE;
         } else {
-            LoggedIn = FALSE;
+            loggedIn = FALSE;
         }
     } else if (num == RCV_LM_SHARE) {
         string split = llJsonGetValue(message, ["split"]);
@@ -425,7 +425,7 @@ state menu {
         } else if (channel == shareChannel) {
             message = llReplaceSubString(message, "%", "", 0);
             twoSplit = (integer)message;
-            if (LoggedIn) {
+            if (loggedIn) {
                 tipSplit = twoSplit;
             } else {
                 tipSplit = 0;
@@ -475,10 +475,8 @@ state menu {
                 }
             } else if (message == "CLEAR") {
                 state confirm;
-            } else if (message == "LOGIN") {
-                llMessageLinked(LINK_THIS, SND_LM_LOGIN, (string)LoggedIn, id);
-            } else if (message == "LOGOUT") {
-                llMessageLinked(LINK_THIS, SND_LM_LOGIN, (string)LoggedIn, id);
+            } else if ((message == "LOGIN")|| (message == "LOGOUT")) {
+                llMessageLinked(LINK_THIS, SND_LM_LOGIN, (string)loggedIn, id);
             } else if (message == "HOVER TXT") {
                 if (inputListen != -1) llListenRemove(inputListen);
                 inputListen = llListen(inputChannel, "", id, "");

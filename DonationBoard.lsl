@@ -31,7 +31,7 @@ integer  objListenID;
 integer  objChannel;           // Channel for communication between screens, based on owner
 integer  listenChannel  = 0;   // Channel for chat and gestures
  
-integer  LoggedIn       = FALSE;
+integer  loggedIn       = FALSE;
 integer  needInit       = TRUE; // Prim initialization is needed
 integer  showTotal      = TRUE;
 integer  twoSplit       = 80;  // % shared if group member logged in
@@ -110,7 +110,7 @@ updateHoverText() {
         }
         if (showTotal) {
             if (totalDonations > 0) {
-                text += (string)totalDonations + " L$ donated so far!";
+                text += "L$" + (string)totalDonations + " donated so far!";
             } else {
                 text += "Empty - Be the first to donate!";
             }
@@ -156,6 +156,15 @@ stateDonation() {
         msg = prefix + location + " is active and accepting donations";
     } else {
         msg = prefix + location + " is disabled and not accepting donations";
+    }
+    msg += "\nShare percent to logged in user = " + (string)twoSplit + "%";
+    if (loggedIn) {
+        string username = llGetUsername(current);
+        if (username != "") {
+            msg += "\nLogged in user = " + username;
+        }
+    } else {
+        msg += "\nNo user currently logged in, all donations to owner";
     }
     msg += "\nTotal contributions from this board = L$" + (string)totalDonations;
 
@@ -284,17 +293,17 @@ readyForDonations(key recKey) {
         boardName = customName;
     }
     if (current == owner) {
-        LoggedIn = FALSE;
+        loggedIn = FALSE;
         tipSplit = 0;
     } else {
-        LoggedIn = TRUE;
+        loggedIn = TRUE;
         tipSplit = twoSplit;
         llInstantMessage(current, "You are now logged in.");
         llSetTimerEvent(checkInterval);
     }
-    llMessageLinked(LINK_THIS, SND_LM_LOGIN, (string)LoggedIn, current);
+    llMessageLinked(LINK_THIS, SND_LM_LOGIN, (string)loggedIn, current);
     getProfilePic(current);
-    llMessageLinked(LINK_THIS, SND_LM_SHARE, (string)tipSplit, "");
+    llMessageLinked(LINK_THIS, SND_LM_SHARE, llList2Json(JSON_OBJECT, ["split", (string)tipSplit, "share", (string)twoSplit]), "");
 }
 
 getDatastoreValues() {
@@ -357,7 +366,7 @@ getDatastoreValues() {
     if (linksetValue != "") {
         tipSplit = (integer)linksetValue;
     } else {
-        if (LoggedIn) {
+        if (loggedIn) {
             tipSplit = twoSplit;
         } else {
             tipSplit = 0;
@@ -458,27 +467,27 @@ checkGone(key avatar) {
 
     if (distance > maxDistance) {
         llInstantMessage(avatar, "You were too far from the donation board and have been logged out.");
-        LoggedIn = FALSE;
+        loggedIn = FALSE;
         tipSplit = 0;
         current = owner;
-        llMessageLinked(LINK_THIS, SND_LM_LOGIN, (string)LoggedIn, current);
+        llMessageLinked(LINK_THIS, SND_LM_LOGIN, (string)loggedIn, current);
         if (customName == "") {
             boardName = llKey2Name(current) + " Tip Board";
         } else {
             boardName = customName;
         }
-        llMessageLinked(LINK_THIS, SND_LM_SHARE, (string)tipSplit, "");
+        llMessageLinked(LINK_THIS, SND_LM_SHARE, llList2Json(JSON_OBJECT, ["split", (string)tipSplit, "share", (string)twoSplit]), "");
         getProfilePic(current);
         llSetTimerEvent(0.0);
     }
 }
 
-setLoggedIn() {
-    if (!LoggedIn) {
+setloggedIn() {
+    if (!loggedIn) {
         current = toucher;
         boardName = llKey2Name(current) + " Tip Board";
-        LoggedIn = TRUE;
-        llMessageLinked(LINK_THIS, SND_LM_LOGIN, (string)LoggedIn, current);
+        loggedIn = TRUE;
+        llMessageLinked(LINK_THIS, SND_LM_LOGIN, (string)loggedIn, current);
         tipSplit = twoSplit;
         getProfilePic(current);
 
@@ -486,10 +495,10 @@ setLoggedIn() {
         llInstantMessage(current, "You are now logged in as DJ.");
         llSetTimerEvent(checkInterval);
     } else if (toucher == current) {
-        LoggedIn = FALSE;
+        loggedIn = FALSE;
         tipSplit = 0;
         current = owner;
-        llMessageLinked(LINK_THIS, SND_LM_LOGIN, (string)LoggedIn, current);
+        llMessageLinked(LINK_THIS, SND_LM_LOGIN, (string)loggedIn, current);
         if (customName == "") {
             boardName = llKey2Name(current) + " Tip Board";
         } else {
@@ -502,7 +511,7 @@ setLoggedIn() {
     } else {
         llInstantMessage(toucher, "A DJ is already logged in.");
     }
-    llMessageLinked(LINK_THIS, SND_LM_SHARE, (string)tipSplit, "");
+    llMessageLinked(LINK_THIS, SND_LM_SHARE, llList2Json(JSON_OBJECT, ["split", (string)tipSplit, "share", (string)twoSplit]), "");
 }
 
 particlesOff() {
@@ -704,7 +713,7 @@ string lnk_msg(integer sender, integer num, string message, key id) {
         if (toucher == owner) {
             current = owner;
         } else {
-            setLoggedIn();
+            setloggedIn();
         }
         readyForDonations(current);
         ret_state = "donate";
@@ -725,7 +734,7 @@ string lnk_msg(integer sender, integer num, string message, key id) {
         }
     } else if (num == RCV_LM_LOGIN) {
         toucher = id;
-        setLoggedIn();
+        setloggedIn();
     } else if (num == RCV_LM_HOVER) {
         boardName = message;
         customName = boardName;
@@ -736,7 +745,7 @@ string lnk_msg(integer sender, integer num, string message, key id) {
         getProfilePic(current);
     } else if (num == RCV_LM_SHARE) {
         twoSplit = (integer)message;
-        if (LoggedIn) {
+        if (loggedIn) {
             tipSplit = twoSplit;
         } else {
             tipSplit = 0;
@@ -861,7 +870,7 @@ default {
             llSetTimerEvent(0.0);
         }
 
-        if (!LoggedIn) return;
+        if (!loggedIn) return;
 
         checkGone(current);
     }
@@ -916,7 +925,7 @@ state donate {
                 if (toucher == owner) {
                     llMessageLinked(LINK_THIS, SND_LM_MENU, "", toucher);
                 } else {
-                    setLoggedIn();
+                    setloggedIn();
                 }
                 readyForDonations(current);
                 startDonation();
@@ -962,7 +971,7 @@ state donate {
             llSetTimerEvent(0.0);
         }
 
-        if (!LoggedIn) return;
+        if (!loggedIn) return;
 
         checkGone(current);
     }
