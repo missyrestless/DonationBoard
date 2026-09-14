@@ -2,9 +2,9 @@
 
 The Truth &amp; Beauty Donation Board is a scripted single prim which accepts donation payments.
 
-Rez a Truth &amp; Beauty Donation Board and position it where you want.
+Rez a Truth &amp; Beauty Donation Board and position it where you want. It automatically configures as a donation board for the parcel in which it is rezzed. Set the donation board group and members of that group can login, the board automatically converting to a shared tip system.
 
-Rez as many boards as you need, they are Copy/Modify.
+Rez as many boards as you need, they are Copy/Modify and only a single prim.
 
 ## Features
 
@@ -14,6 +14,7 @@ The Truth &amp; Beauty Donation Board includes the following features:
     - Auto configures and is ready to accept donations without any additional steps
     - This default auto-configuration sends 100% of the donations to the owner of the board
 - Donations can be split between a group member who is near the board and the owner
+    - Easily converts between a parcel donation board and an event or DJ tip board
 - All Truth &amp; Beauty Donation Boards in the same region can be managed from any of them simultaneously
 - A dialog menu can be used to further customize the board (see below for details)
 - All configuration settings are stored in the prim's linkset datastore
@@ -24,7 +25,7 @@ The Truth &amp; Beauty Donation Board includes the following features:
     - Select from any of the several textures provided to customize
     - Drag and drop any texture into the prim Contents to add that texture to the dialog menu Texture options
 - A particle display is emitted when rezzed/reset and when a donation is made
-- The `DonationBoard` and `DialogMenu` LSL scripts are low lag and have been optimized with `PyOptimizer`
+- The `DonationBoard` and `DialogMenu` LSL scripts are low lag and have been optimized with `LSL-PyOptimizer`
 - The `DonationBoard` and `DialogMenu` scripts are Open Source and can be viewed, copied, and modified freely within the terms of the license
 
 ## Marketplace
@@ -73,3 +74,30 @@ The main menu includes the following buttons:
     - Toggle display of total donations in hover text
 - **EXIT**
     - Exit the Dialog Menu
+
+## Splitting Donations
+
+The Truth & Beauty Donation Board can be configured to split donations between the owner and a logged in user.
+
+In order for the donation splitting feature to work, the request for Debit permission must have been accepted.
+
+Members of the board's group can login by touching the board.
+
+Only the owner can manage the tip sharing features such as specifying the share percentage, configuring the board's group, and enabling/disabling sharing via the dialog menus.
+
+To configure the board's group, the owner can right-click the board and select Edit. In the General tab of the Edit window, click the wrench icon to the right of the Group: setting. Select the group to use in the Group chooser popup. Close the Edit window.
+
+Once the board group is configured, enable the group sharing feature of the board by right-clicking the board and selecting Touch. In the main dialog menu, click GROUP. Members of the configured group can now login by touching the board and donations will be split between the owner and logged in user.
+
+### Configure the share percentage
+
+The owner can modify the donation percent shared with logged in users by opening the dialog menu (right-click the board and select Touch). In the main menu, click SHARE. An input text box will be opened displaying the currently configured share percentage. To change this, enter the desired percent to be sent to the logged in user and click Submit.
+
+### Summary of Donation Sharing
+
+- Debit permission must be granted
+- The board must be set to the desired group
+- Group sharing must be enabled by clicking the GROUP menu button
+- Percent split to the logged in user can be configured (default: 80%)
+- Group members must wear the group tag in order to login
+- Leaving the area will logout the user
