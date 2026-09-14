@@ -36,6 +36,7 @@ integer  GROUP         = FALSE; // Set to TRUE to allow group members to manage,
 
 integer  LoggedIn;
 integer  tipSplit      = 0;     // % shared
+integer  twoSplit      = 80;    // default % shared to logged in user
 integer  deflt_pay     = 250;   // Default donation amount
 list     quick_pay     = [100, 250, 500, 1000]; // quick pay buttons
 
@@ -98,13 +99,17 @@ key owner       = NULL_KEY;
 key toucher     = NULL_KEY;
 
 list getTextures() {
-    list texture_list = [];
+    list    texture_list = [];
     integer count = llGetInventoryNumber(INVENTORY_TEXTURE);
+    string  textureName;
 
     // Populate list of inventory texture names
     integer i;
     for (i = 0; i < count; ++i) {
-        texture_list += llGetInventoryName(INVENTORY_TEXTURE, i);
+        textureName = llGetInventoryName(INVENTORY_TEXTURE, i);
+        if ((textureName != "Sides") && (textureName != "Maintenance")) {
+            texture_list += textureName;
+        }
     }
 
     return texture_list;
@@ -351,7 +356,10 @@ string lnk_msg(integer sender, integer num, string message, key id) {
             LoggedIn = FALSE;
         }
     } else if (num == RCV_LM_SHARE) {
-        tipSplit = (integer)message;
+        string split = llJsonGetValue(message, ["split"]);
+        tipSplit = (integer)split;
+        string share = llJsonGetValue(message, ["share"]);
+        twoSplit = (integer)share;
     } else if (num == RCV_LM_STATUS_ON) {
         llSetClickAction(CLICK_ACTION_PAY);
         llSetPayPrice(deflt_pay, quick_pay);
@@ -415,7 +423,13 @@ state menu {
                 inputListen = -1;
             }
         } else if (channel == shareChannel) {
-            tipSplit = (integer)message;
+            message = llReplaceSubString(message, "%", "", 0);
+            twoSplit = (integer)message;
+            if (LoggedIn) {
+                tipSplit = twoSplit;
+            } else {
+                tipSplit = 0;
+            }
             linksetDataWrite(SHARE_LSD_KEY, message, "Owner donation percent");
 
             llMessageLinked(LINK_THIS, SND_LM_SHARE, message, "");
@@ -475,7 +489,7 @@ state menu {
                 if (shareListen != -1) llListenRemove(shareListen);
                 shareListen = llListen(shareChannel, "", id, "");
                 llSetTimerEvent(LISTEN_TTL);
-                llTextBox(id, "\nEnter the share percent into the box (" + (string)tipSplit + "%)", shareChannel);
+                llTextBox(id, "\nEnter the percent to share with a logged in user (currently " + (string)twoSplit + "%)", shareChannel);
                 return; // Exit the listen event
             } else if (message == "TEXTURE") {
                 state text;

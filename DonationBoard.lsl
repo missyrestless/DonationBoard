@@ -54,7 +54,7 @@ key      profileRequestID;
 key      owner;
 key      toucher = NULL_KEY;
 
-string   VERT_SPACE  = "\n \n \n \n \n \n \n ";
+string   VERT_SPACE  = "\n \n \n \n \n \n ";
 string   sideTexture = "Sides";
 string   customName  = "";
 string   boardName;
@@ -482,7 +482,7 @@ setLoggedIn() {
         tipSplit = twoSplit;
         getProfilePic(current);
 
-        llSetText("🎧 DJ: " + boardName + " 🎧\nTips Welcome!", <0.5,1.0,0.5>, 1.0);
+        llSetText("🎧  " + boardName + " 🎧\nTips Welcome!" + VERT_SPACE, <0.5,1.0,0.5>, 1.0);
         llInstantMessage(current, "You are now logged in as DJ.");
         llSetTimerEvent(checkInterval);
     } else if (toucher == current) {
@@ -496,7 +496,7 @@ setLoggedIn() {
             boardName = customName;
         }
         getProfilePic(current);
-        llSetText("🎶 Touch to Login as DJ 🎶", <1,1,1>, 1.0);
+        startDonation();
         llInstantMessage(toucher, "You have logged out.");
         llSetTimerEvent(0.0);
     } else {
@@ -781,16 +781,16 @@ default {
         toucher   = NULL_KEY;
         owner     = llGetOwner();
 
+        // Set Prim face textures if not already set
+        if (needInit) {
+            initPrim();
+        }
+
         // Retrieve any stored configuration or set defaults
         getDatastoreValues();
 
         // Remove any previous hover text
         llSetText("", < 1.0, 1.0, 1.0>, 1.0);
-
-        // Set Prim face textures if not already set
-        if (needInit) {
-            initPrim();
-        }
 
         // Compute a large negative channel number based on the object owner
         // All boards owned by the same owner will use the same channel
