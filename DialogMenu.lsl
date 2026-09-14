@@ -34,6 +34,7 @@ integer  side_one      = 0;     // Face number for front of board
 integer  ALL           = TRUE;  // Set to TRUE to effect all boards, FALSE for single board
 integer  GROUP         = FALSE; // Set to TRUE to allow group members to manage, FALSE for owner only
 
+integer  LoggedIn;
 integer  tipSplit      = 0;     // % shared
 integer  deflt_pay     = 250;   // Default donation amount
 list     quick_pay     = [100, 250, 500, 1000]; // quick pay buttons
@@ -70,13 +71,6 @@ string  DEF_PAY_LSD_KEY    = "default_payment";
 // Pay dialog button amounts
 string  PAY_AMTS_LSD_KEY   = "pay_amounts";
 
-// Receive from Donation Board
-integer RCV_LM_MENU        = 100;
-integer RCV_LM_GROUP       = 150;
-integer RCV_LM_STATUS_ON   = 200;
-integer RCV_LM_STATUS_OFF  = 210;
-integer RCV_LM_SHARE       = 250;
-
 // Link Messages to Donation Board
 integer SND_LM_ALL         = 10;
 integer SND_LM_SOLO        = 15;
@@ -86,8 +80,10 @@ integer SND_LM_INFO        = 40;
 integer SND_LM_DATA_WRITE  = 45;
 integer SND_LM_FRONT_TEXT  = 48;
 integer SND_LM_GROUP       = 50;
+integer SND_LM_TOTAL       = 55;
 integer SND_LM_OBJMSG      = 60;
 integer SND_LM_HOVER       = 70;
+integer SND_LM_LOGIN       = 75;
 integer SND_LM_PROFILE     = 80;
 integer SND_LM_SHARE       = 90;
 integer SND_LM_READ_AMTS   = 95;
@@ -110,6 +106,7 @@ list getTextures() {
     for (i = 0; i < count; ++i) {
         texture_list += llGetInventoryName(INVENTORY_TEXTURE, i);
     }
+
     return texture_list;
 }
 
@@ -119,8 +116,8 @@ list trimList(list input_list, integer min_value) {
 
     // Loop backwards through the list
     for (; i >= 0; --i) {
-        // Check if the current item is less than the minimum
-        if (llList2Integer(input_list, i) < min_value) {
+        // Check if the current item is less than or equal to the minimum
+        if (llList2Integer(input_list, i) <= min_value) {
             // Delete the item from the list
             input_list = llDeleteSubList(input_list, i, i);
         }
@@ -199,12 +196,13 @@ displayMainMenu() {
         menuMessage += "\nGROUP = Allow group members to manage";
     }
     menuMessage += "\nAMOUNTS = pay dialog suggested amounts";
-    menuMessage += "\nNAME = Set the Board name hover text";
+    menuMessage += "\nHOVER TXT = Set the Board hover text";
     if (toucher == owner) {
         menuMessage += "\nCLEAR = Reset and clear the datastore";
         menuMessage += "\nSHARE = Set the Board donation share percent";
     }
     menuMessage += "\nTEXTURE = Open the Board texture menu";
+    menuMessage += "\nTOTAL = Toggle display of total donations";
     if (boardStatus) {
         main_menu = ["STOP", "INFO"];
         menuMessage += "\n\nThis Board is active and accepting donations";
@@ -222,10 +220,15 @@ displayMainMenu() {
     } else {
         main_menu += ["GROUP"];
     }
-    if (toucher == owner) {
-        main_menu += ["AMOUNTS", "CLEAR", "NAME", "SHARE", "TEXTURE", "EXIT"];
+    if (LoggedIn) {
+        main_menu += ["LOGOUT"];
     } else {
-        main_menu += ["AMOUNTS", "NAME", "TEXTURE", "EXIT"];
+        main_menu += ["LOGIN"];
+    }
+    if (toucher == owner) {
+        main_menu += ["AMOUNTS", "CLEAR", "HOVER TXT", "SHARE", "TEXTURE", "TOTAL", "EXIT"];
+    } else {
+        main_menu += ["AMOUNTS", "HOVER TXT", "TEXTURE", "TOTAL", "EXIT"];
     }
     showMenu(menuMessage, main_menu);
 }
@@ -317,10 +320,19 @@ integer linksetDataWrite(string lsdKey, string value, string cfg) {
             llRegionSayTo(owner, 0, "[Donation Board] " + cfg + " save failed (code " + (string)returnCode + ").");
         }
     }
+
     return returnCode;
 }
 
 string lnk_msg(integer sender, integer num, string message, key id) {
+    // Receive from Donation Board
+    integer RCV_LM_MENU        = 100;
+    integer RCV_LM_GROUP       = 150;
+    integer RCV_LM_LOGIN       = 175;
+    integer RCV_LM_STATUS_ON   = 200;
+    integer RCV_LM_STATUS_OFF  = 210;
+    integer RCV_LM_SHARE       = 250;
+
     string ret_state = "";
 
     if (num == RCV_LM_MENU) {
@@ -331,6 +343,12 @@ string lnk_msg(integer sender, integer num, string message, key id) {
             GROUP = TRUE;
         } else if (message == "Owner") {
             GROUP = FALSE;
+        }
+    } else if (num == RCV_LM_LOGIN) {
+        if ((integer)message) {
+            LoggedIn = TRUE;
+        } else {
+            LoggedIn = FALSE;
         }
     } else if (num == RCV_LM_SHARE) {
         tipSplit = (integer)message;
@@ -344,6 +362,7 @@ string lnk_msg(integer sender, integer num, string message, key id) {
         llSetPayPrice(deflt_pay, quick_pay);
         boardStatus = FALSE;
     }
+
     return ret_state;
 }
 
@@ -441,13 +460,16 @@ state menu {
                     if (id) llRegionSayTo(id, 0, "Only the owner can set the Boards to owner only");
                 }
             } else if (message == "CLEAR") {
-                 llLinksetDataReset();
-                 llResetScript();
-            } else if (message == "NAME") {
+                state confirm;
+            } else if (message == "LOGIN") {
+                llMessageLinked(LINK_THIS, SND_LM_LOGIN, (string)LoggedIn, id);
+            } else if (message == "LOGOUT") {
+                llMessageLinked(LINK_THIS, SND_LM_LOGIN, (string)LoggedIn, id);
+            } else if (message == "HOVER TXT") {
                 if (inputListen != -1) llListenRemove(inputListen);
                 inputListen = llListen(inputChannel, "", id, "");
                 llSetTimerEvent(LISTEN_TTL);
-                llTextBox(id, "\nEnter the Donation Board name into the box", inputChannel);
+                llTextBox(id, "\nEnter the Donation Board hover text into the box", inputChannel);
                 return; // Exit the listen event
             } else if (message == "SHARE") {
                 if (shareListen != -1) llListenRemove(shareListen);
@@ -457,6 +479,8 @@ state menu {
                 return; // Exit the listen event
             } else if (message == "TEXTURE") {
                 state text;
+            } else if (message == "TOTAL") {
+                llMessageLinked(LINK_THIS, SND_LM_TOTAL, "", "");
             } else if (message == "EXIT") {
                 state default;
             }
@@ -595,11 +619,11 @@ state amts {
             } else {
                 if (id) llRegionSayTo(id, 0, "Only the owner can set the Boards to owner only");
             }
-        } else if (message == "NAME") {
+        } else if (message == "HOVER TXT") {
             if (inputListen != -1) llListenRemove(inputListen);
             inputListen = llListen(inputChannel, "", id, "");
             llSetTimerEvent(LISTEN_TTL);
-            llTextBox(id, "\nEnter the Donation Board name into the box)", inputChannel);
+            llTextBox(id, "\nEnter the Donation Board hover text into the box)", inputChannel);
             return; // Exit the listen event
         } else if (message == "TEXTURE") {
             state text;
@@ -662,3 +686,35 @@ state amts {
     }
 }
 
+state confirm {
+    state_entry() {
+        llListenRemove(inputListen);
+        inputListen = llListen(inputChannel, "", owner, "");
+        llSetTimerEvent(LISTEN_TTL);
+
+        string msg = "This will clear all customized settings from storage";
+        msg += "\nAre you sure you want to proceed?";
+        llDialog(owner, msg, ["YES", "NO"], inputChannel);
+    }
+
+    listen(integer channel, string name, key id, string message) {
+        if (channel == inputChannel) {
+            llListenRemove(inputListen);
+            inputListen = -1;
+            if (message == "YES") {
+                llLinksetDataReset();
+                llResetScript();
+            } else if (message == "NO") {
+                llOwnerSay("Clear linkset storage action cancelled.");
+            }
+            state menu;
+        }
+    }
+
+    timer() {
+        llListenRemove(inputListen);
+        inputListen = -1;
+        llSetTimerEvent(0.0);
+        state menu;
+    }
+}

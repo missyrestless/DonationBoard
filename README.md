@@ -61,8 +61,12 @@ The main menu includes the following buttons:
     - Owner only access
 - **GROUP**
     - Allow group members to manage the boards
-- **BOARD NAME**
+- **CLEAR**
+    - Clear all stored configuration and reset to original state
+- **HOVER TXT**
     - Set the Board name hover text
+- **SHARE**
+    - Set the percentage of donation shared with logged in group member
 - **TEXTURE**
     - Open the Board texture menu
 - **EXIT**

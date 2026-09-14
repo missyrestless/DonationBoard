@@ -22,7 +22,7 @@
 //                                                //
 ////////////////////////////////////////////////////
 
-string   VERSION = "1.0.3";
+string   VERSION = "1.0.4";
 
 integer  ALL     = TRUE;      // Set to TRUE to effect all boards, FALSE for single board
 integer  GROUP   = FALSE;     // Set to TRUE to allow group members to manage, FALSE for owner only
@@ -32,6 +32,7 @@ integer  objChannel;           // Channel for communication between screens, bas
 integer  listenChannel  = 0;   // Channel for chat and gestures
  
 integer  LoggedIn       = FALSE;
+integer  showTotal      = TRUE;
 integer  twoSplit       = 80;  // % shared if group member logged in
 integer  tipSplit       = 0;   // % shared
 integer  totalDonations = 0;
@@ -90,41 +91,38 @@ string  PAY_AMTS_LSD_KEY   = "pay_amounts";
 // Send to dialog menu
 integer SND_LM_MENU        = 100;
 integer SND_LM_GROUP       = 150;
+integer SND_LM_LOGIN       = 175;
 integer SND_LM_STATUS_ON   = 200;
 integer SND_LM_STATUS_OFF  = 210;
 integer SND_LM_SHARE       = 250;
-// Receive from Dialog Menu
-integer RCV_LM_ALL         = 10;
-integer RCV_LM_SOLO        = 15;
-integer RCV_LM_DONATE      = 20;
-integer RCV_LM_IDLE        = 30;
-integer RCV_LM_INFO        = 40;
-integer RCV_LM_DATA_WRITE  = 45;
-integer RCV_LM_FRONT_TEXT  = 48;
-integer RCV_LM_GROUP       = 50;
-integer RCV_LM_OBJMSG      = 60;
-integer RCV_LM_HOVER       = 70;
-integer RCV_LM_PROFILE     = 80;
-integer RCV_LM_SHARE       = 90;
-integer RCV_LM_READ_AMTS   = 95;
 
 updateHoverText() {
-    string text = boardName + " Donation Board\n";
+    // string text = boardName + " Donation Board\n";
+    string text = boardName + "\n";
+    string offTexture = "Maintenance";
     vector color;
 
     if (boardStatus) {
-        if (totalDonations > 0) {
-            text += (string)totalDonations + " L$ donated so far!";
-        } else {
-            text += "Empty - Be the first to donate!";
+        if (llGetTexture(side_one) == offTexture) {
+            readyForDonations(owner);
+        }
+        if (showTotal) {
+            if (totalDonations > 0) {
+                text += (string)totalDonations + " L$ donated so far!";
+            } else {
+                text += "Empty - Be the first to donate!";
+            }
         }
         color = <0.0, 1.0, 0.0>; // Green hover text
     } else {
         text += "Inactive, temporarily unavailable";
         color = <1.0, 1.0, 0.0>; // Yellow hover text
+        if (llGetInventoryType(offTexture) == INVENTORY_TEXTURE) {
+            llSetTexture(offTexture, side_one);
+        }
     }
     text += VERT_SPACE;
-    llSetText(text, color, 1.0); // Green hover text
+    llSetText(text, color, 1.0);
 }
 
 stopDonation() {
@@ -168,6 +166,11 @@ stateDonation() {
             llOwnerSay(msg);
         }
     }
+}
+
+string getParcelName() {
+    list details = llGetParcelDetails(llGetPos(), [PARCEL_DETAILS_NAME]);
+    return llList2String(details, 0);
 }
 
 howtoPay() {
@@ -255,7 +258,7 @@ acceptDonation(key id, integer amount) {
     }
 
     if (ownerShare > 0) {
-        llInstantMessage(owner, "You retained L$" + (string)ownerShare + " from a tip.");
+        llInstantMessage(owner, "You retained L$" + (string)ownerShare + " from a donation.");
     }
 
     // Add a little pizzazz
@@ -274,7 +277,7 @@ acceptDonation(key id, integer amount) {
 readyForDonations(key recKey) {
     current = recKey;
     if (customName == "") {
-        boardName = llKey2Name(current);
+        boardName = llKey2Name(current) + " Tip Board";
     } else {
         boardName = customName;
     }
@@ -287,6 +290,7 @@ readyForDonations(key recKey) {
         llInstantMessage(current, "You are now logged in.");
         llSetTimerEvent(checkInterval);
     }
+    llMessageLinked(LINK_THIS, SND_LM_LOGIN, (string)LoggedIn, current);
     getProfilePic(current);
     llMessageLinked(LINK_THIS, SND_LM_SHARE, (string)tipSplit, "");
 }
@@ -300,7 +304,7 @@ getDatastoreValues() {
     if (linksetValue != "") {
         boardName = linksetValue;
     } else {
-        boardName = llKey2Name(owner);
+        boardName = llKey2Name(owner) + " Tip Board";
     }
     // Total amount received linkset data key
     linksetValue = llLinksetDataRead(TOTAL_AMT_LSD_KEY);
@@ -455,8 +459,9 @@ checkGone(key avatar) {
         LoggedIn = FALSE;
         tipSplit = 0;
         current = owner;
+        llMessageLinked(LINK_THIS, SND_LM_LOGIN, (string)LoggedIn, current);
         if (customName == "") {
-            boardName = llKey2Name(current);
+            boardName = llKey2Name(current) + " Tip Board";
         } else {
             boardName = customName;
         }
@@ -469,8 +474,9 @@ checkGone(key avatar) {
 setLoggedIn() {
     if (!LoggedIn) {
         current = toucher;
-        boardName = llKey2Name(current);
+        boardName = llKey2Name(current) + " Tip Board";
         LoggedIn = TRUE;
+        llMessageLinked(LINK_THIS, SND_LM_LOGIN, (string)LoggedIn, current);
         tipSplit = twoSplit;
         getProfilePic(current);
 
@@ -481,8 +487,9 @@ setLoggedIn() {
         LoggedIn = FALSE;
         tipSplit = 0;
         current = owner;
+        llMessageLinked(LINK_THIS, SND_LM_LOGIN, (string)LoggedIn, current);
         if (customName == "") {
-            boardName = llKey2Name(current);
+            boardName = llKey2Name(current) + " Tip Board";
         } else {
             boardName = customName;
         }
@@ -613,7 +620,35 @@ list csv2list(string csv) {
     return intList;
 }
 
+processAction(integer action, string name, string value) {
+    if (action == LINKSETDATA_RESET) {
+        llOwnerSay("Link set datastore has been cleared.");
+        llResetScript();
+    } else if (action == LINKSETDATA_DELETE) {
+        llOwnerSay("Link set datastore key \"" + name + "\" has been deleted.");
+    } else if (action == LINKSETDATA_UPDATE) {
+        llOwnerSay("Link set datastore key \"" + name + "\" = \"" + value + "\".");
+    }
+}
+
 string lnk_msg(integer sender, integer num, string message, key id) {
+    // Receive from Dialog Menu
+    integer RCV_LM_ALL         = 10;
+    integer RCV_LM_SOLO        = 15;
+    integer RCV_LM_DONATE      = 20;
+    integer RCV_LM_IDLE        = 30;
+    integer RCV_LM_INFO        = 40;
+    integer RCV_LM_DATA_WRITE  = 45;
+    integer RCV_LM_FRONT_TEXT  = 48;
+    integer RCV_LM_GROUP       = 50;
+    integer RCV_LM_TOTAL       = 55;
+    integer RCV_LM_OBJMSG      = 60;
+    integer RCV_LM_HOVER       = 70;
+    integer RCV_LM_LOGIN       = 75;
+    integer RCV_LM_PROFILE     = 80;
+    integer RCV_LM_SHARE       = 90;
+    integer RCV_LM_READ_AMTS   = 95;
+
     // Message to send to other boards
     string msg = message;
     string ret_state = "";
@@ -646,6 +681,9 @@ string lnk_msg(integer sender, integer num, string message, key id) {
         } else if (message == "Owner") {
             GROUP = FALSE;
         }
+    } else if (num == RCV_LM_LOGIN) {
+        toucher = id;
+        setLoggedIn();
     } else if (num == RCV_LM_HOVER) {
         boardName = message;
         customName = boardName;
@@ -679,6 +717,9 @@ string lnk_msg(integer sender, integer num, string message, key id) {
         } else {
             stopDonation();
         }
+    } else if (num == RCV_LM_TOTAL) {
+        showTotal = !showTotal;
+        updateHoverText();
     }
 
     if (ALL) {
@@ -786,14 +827,7 @@ default {
     }
 
     linkset_data(integer action, string name, string value) {
-        if (action == LINKSETDATA_RESET) {
-            llOwnerSay("Link set datastore has been cleared.");
-            llResetScript();
-        } else if (action == LINKSETDATA_DELETE) {
-            llOwnerSay("Link set datastore key \"" + name + "\" has been deleted.");
-        } else if (action == LINKSETDATA_UPDATE) {
-            llOwnerSay("Link set datastore key \"" + name + "\" = \"" + value + "\".");
-        }
+        processAction(action, name, value);
     }
 
     changed(integer change) {
@@ -808,9 +842,26 @@ default {
     }
 
     on_rez(integer num) {
+        string slurl = getBoardSlurl();
+        string parcel = getParcelName();
+        string sideTexture = "Sides";
+        integer backFace = 5;
+        integer i;
+
         owner = llGetOwner();
         stopDonation();
-        string slurl = getBoardSlurl();
+
+        // Set default texture and glow of beveled sides and back
+        if (llGetInventoryType(sideTexture) == INVENTORY_TEXTURE) {
+            for (i = 1; i < backFace; i++) {
+                llSetTexture(sideTexture, i);
+                llSetPrimitiveParams([PRIM_GLOW, i, 0.1]);
+            }
+        }
+        // Set back transparent
+        llSetAlpha(0.0, backFace);
+        getDefaultTextures();
+
         llOwnerSay("The Truth & Beauty Donation Board located at " + slurl + " is now active.");
         llOwnerSay("Activate the 'Start Donations', 'Stop Donations', and 'Donations Info' gestures in your inventory");
         llOwnerSay("Once activated, saying '/paystart' in public chat will enable all donation boards you own in this region");
@@ -824,6 +875,8 @@ default {
         // Retrieve any stored configuration parameters from linkset datastore
         // If not stored then use defaults
         getDatastoreValues();
+        boardName = parcel + " Donation Board";
+        customName = boardName;
         setDatastoreValues();
         llResetScript();
     }
@@ -904,14 +957,7 @@ state donate {
     }
 
     linkset_data(integer action, string name, string value) {
-        if (action == LINKSETDATA_RESET) {
-            llOwnerSay("Link set datastore has been cleared.");
-            llResetScript();
-        } else if (action == LINKSETDATA_DELETE) {
-            llOwnerSay("Link set datastore key \"" + name + "\" has been deleted.");
-        } else if (action == LINKSETDATA_UPDATE) {
-            llOwnerSay("Link set datastore key \"" + name + "\" = \"" + value + "\".");
-        }
+        processAction(action, name, value);
     }
 
     changed(integer change) {
@@ -973,14 +1019,7 @@ state idle {
     }
 
     linkset_data(integer action, string name, string value) {
-        if (action == LINKSETDATA_RESET) {
-            llOwnerSay("Link set datastore has been cleared.");
-            llResetScript();
-        } else if (action == LINKSETDATA_DELETE) {
-            llOwnerSay("Link set datastore key \"" + name + "\" has been deleted.");
-        } else if (action == LINKSETDATA_UPDATE) {
-            llOwnerSay("Link set datastore key \"" + name + "\" = \"" + value + "\".");
-        }
+        processAction(action, name, value);
     }
 
     changed(integer change) {
