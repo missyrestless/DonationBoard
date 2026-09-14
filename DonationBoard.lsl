@@ -159,7 +159,7 @@ stateDonation() {
     }
     msg += "\nShare percent to logged in user = " + (string)twoSplit + "%";
     if (loggedIn) {
-        string username = llGetUsername(current);
+        string username = llKey2Name(current);
         if (username != "") {
             msg += "\nLogged in user = " + username;
         }
