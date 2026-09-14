@@ -200,7 +200,10 @@ displayMainMenu() {
     }
     menuMessage += "\nAMOUNTS = pay dialog suggested amounts";
     menuMessage += "\nNAME = Set the Board name hover text";
-    menuMessage += "\nSHARE = Set the Board donation share percent";
+    if (toucher == owner) {
+        menuMessage += "\nCLEAR = Reset and clear the datastore";
+        menuMessage += "\nSHARE = Set the Board donation share percent";
+    }
     menuMessage += "\nTEXTURE = Open the Board texture menu";
     if (boardStatus) {
         main_menu = ["STOP", "INFO"];
@@ -220,7 +223,7 @@ displayMainMenu() {
         main_menu += ["GROUP"];
     }
     if (toucher == owner) {
-        main_menu += ["AMOUNTS", "NAME", "SHARE", "TEXTURE", "EXIT"];
+        main_menu += ["AMOUNTS", "CLEAR", "NAME", "SHARE", "TEXTURE", "EXIT"];
     } else {
         main_menu += ["AMOUNTS", "NAME", "TEXTURE", "EXIT"];
     }
@@ -317,6 +320,33 @@ integer linksetDataWrite(string lsdKey, string value, string cfg) {
     return returnCode;
 }
 
+string lnk_msg(integer sender, integer num, string message, key id) {
+    string ret_state = "";
+
+    if (num == RCV_LM_MENU) {
+        toucher = id;
+        ret_state = "menu";
+    } else if (num == RCV_LM_GROUP) {
+        if (message == "Group") {
+            GROUP = TRUE;
+        } else if (message == "Owner") {
+            GROUP = FALSE;
+        }
+    } else if (num == RCV_LM_SHARE) {
+        tipSplit = (integer)message;
+    } else if (num == RCV_LM_STATUS_ON) {
+        llSetClickAction(CLICK_ACTION_PAY);
+        llSetPayPrice(deflt_pay, quick_pay);
+        boardStatus = TRUE;
+    } else if (num == RCV_LM_STATUS_OFF) {
+        llSetClickAction(CLICK_ACTION_TOUCH);
+        // llSetPayPrice(PAY_HIDE, [PAY_HIDE ,PAY_HIDE, PAY_HIDE, PAY_HIDE]);
+        llSetPayPrice(deflt_pay, quick_pay);
+        boardStatus = FALSE;
+    }
+    return ret_state;
+}
+
 default {
     state_entry() {
         owner         = llGetOwner();
@@ -328,26 +358,8 @@ default {
     }
 
     link_message(integer sender, integer num, string message, key id) {
-        if (num == RCV_LM_MENU) {
-            toucher = id;
+        if (lnk_msg(sender, num, message, id) == "menu") {
             state menu;
-        } else if (num == RCV_LM_GROUP) {
-            if (message == "Group") {
-                GROUP = TRUE;
-            } else if (message == "Owner") {
-                GROUP = FALSE;
-            }
-        } else if (num == RCV_LM_SHARE) {
-            tipSplit = (integer)message;
-        } else if (num == RCV_LM_STATUS_ON) {
-            llSetClickAction(CLICK_ACTION_PAY);
-            llSetPayPrice(deflt_pay, quick_pay);
-            boardStatus = TRUE;
-        } else if (num == RCV_LM_STATUS_OFF) {
-            llSetClickAction(CLICK_ACTION_TOUCH);
-            // llSetPayPrice(PAY_HIDE, [PAY_HIDE ,PAY_HIDE, PAY_HIDE, PAY_HIDE]);
-            llSetPayPrice(deflt_pay, quick_pay);
-            boardStatus = FALSE;
         }
     }
 
@@ -368,26 +380,8 @@ state menu {
     }
 
     link_message(integer sender, integer num, string message, key id) {
-        if (num == RCV_LM_MENU) {
-            toucher = id;
+        if (lnk_msg(sender, num, message, id) == "menu") {
             state menu;
-        } else if (num == RCV_LM_GROUP) {
-            if (message == "Group") {
-                GROUP = TRUE;
-            } else if (message == "Owner") {
-                GROUP = FALSE;
-            }
-        } else if (num == RCV_LM_SHARE) {
-            tipSplit = (integer)message;
-        } else if (num == RCV_LM_STATUS_ON) {
-            llSetClickAction(CLICK_ACTION_PAY);
-            llSetPayPrice(deflt_pay, quick_pay);
-            boardStatus = TRUE;
-        } else if (num == RCV_LM_STATUS_OFF) {
-            llSetClickAction(CLICK_ACTION_TOUCH);
-            // llSetPayPrice(PAY_HIDE, [PAY_HIDE ,PAY_HIDE, PAY_HIDE, PAY_HIDE]);
-            llSetPayPrice(deflt_pay, quick_pay);
-            boardStatus = FALSE;
         }
     }
 
@@ -446,6 +440,9 @@ state menu {
                 } else {
                     if (id) llRegionSayTo(id, 0, "Only the owner can set the Boards to owner only");
                 }
+            } else if (message == "CLEAR") {
+                 llLinksetDataReset();
+                 llResetScript();
             } else if (message == "NAME") {
                 if (inputListen != -1) llListenRemove(inputListen);
                 inputListen = llListen(inputChannel, "", id, "");
@@ -487,26 +484,8 @@ state text {
     }
 
     link_message(integer sender, integer num, string message, key id) {
-        if (num == RCV_LM_MENU) {
-            toucher = id;
+        if (lnk_msg(sender, num, message, id) == "menu") {
             state menu;
-        } else if (num == RCV_LM_GROUP) {
-            if (message == "Group") {
-                GROUP = TRUE;
-            } else if (message == "Owner") {
-                GROUP = FALSE;
-            }
-        } else if (num == RCV_LM_SHARE) {
-            tipSplit = (integer)message;
-        } else if (num == RCV_LM_STATUS_ON) {
-            llSetClickAction(CLICK_ACTION_PAY);
-            llSetPayPrice(deflt_pay, quick_pay);
-            boardStatus = TRUE;
-        } else if (num == RCV_LM_STATUS_OFF) {
-            llSetClickAction(CLICK_ACTION_TOUCH);
-            // llSetPayPrice(PAY_HIDE, [PAY_HIDE ,PAY_HIDE, PAY_HIDE, PAY_HIDE]);
-            llSetPayPrice(deflt_pay, quick_pay);
-            boardStatus = FALSE;
         }
     }
 
@@ -586,26 +565,8 @@ state amts {
     }
 
     link_message(integer sender, integer num, string message, key id) {
-        if (num == RCV_LM_MENU) {
-            toucher = id;
+        if (lnk_msg(sender, num, message, id) == "menu") {
             state menu;
-        } else if (num == RCV_LM_GROUP) {
-            if (message == "Group") {
-                GROUP = TRUE;
-            } else if (message == "Owner") {
-                GROUP = FALSE;
-            }
-        } else if (num == RCV_LM_SHARE) {
-            tipSplit = (integer)message;
-        } else if (num == RCV_LM_STATUS_ON) {
-            llSetClickAction(CLICK_ACTION_PAY);
-            llSetPayPrice(deflt_pay, quick_pay);
-            boardStatus = TRUE;
-        } else if (num == RCV_LM_STATUS_OFF) {
-            llSetClickAction(CLICK_ACTION_TOUCH);
-            // llSetPayPrice(PAY_HIDE, [PAY_HIDE ,PAY_HIDE, PAY_HIDE, PAY_HIDE]);
-            llSetPayPrice(deflt_pay, quick_pay);
-            boardStatus = FALSE;
         }
     }
 
@@ -613,14 +574,7 @@ state amts {
         if (message == "DONE") {
             linksetDataWrite(PAY_AMTS_LSD_KEY, llList2CSV(quick_pay), "Pay Buttons Amounts");
             linksetDataWrite(DEF_PAY_LSD_KEY, (string)deflt_pay, "Default Pay Amount");
-            if (boardStatus) {
-                llSetClickAction(CLICK_ACTION_PAY);
-                llSetPayPrice(deflt_pay, quick_pay);
-            } else {
-                llSetClickAction(CLICK_ACTION_TOUCH);
-                // llSetPayPrice(PAY_HIDE, [PAY_HIDE ,PAY_HIDE, PAY_HIDE, PAY_HIDE]);
-                llSetPayPrice(deflt_pay, quick_pay);
-            }
+            llSetPayPrice(deflt_pay, quick_pay);
             llMessageLinked(LINK_THIS, SND_LM_READ_AMTS, "", "");
             state default;
         } else if (message == "BUTTON 1") {

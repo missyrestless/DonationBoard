@@ -344,7 +344,7 @@ getDatastoreValues() {
     // Pay dialog button amounts
     linksetValue = llLinksetDataRead(PAY_AMTS_LSD_KEY);
     if (linksetValue != "") {
-        quick_pay = llCSV2List(linksetValue);
+        quick_pay = csv2list(linksetValue);
     }
     // Owner share percent
     linksetValue = llLinksetDataRead(SHARE_LSD_KEY);
@@ -598,12 +598,104 @@ sparkle() {
     ]);
 }
 
+list csv2list(string csv) {
+    list strList = llCSV2List(csv);
+    list intList = [];
+
+    integer i;
+    integer len = llGetListLength(strList);
+
+    for (i = 0; i < len; ++i) {
+        // Typecast each string element to an integer
+        integer val = (integer)llList2String(strList, i);
+        intList += [val];
+    }
+    return intList;
+}
+
+string lnk_msg(integer sender, integer num, string message, key id) {
+    // Message to send to other boards
+    string msg = message;
+    string ret_state = "";
+
+    if (num == RCV_LM_ALL) {
+        ALL = TRUE;
+    } else if (num == RCV_LM_SOLO) {
+        ALL = FALSE;
+    } else if (num == RCV_LM_DONATE) {
+        toucher = id;
+        if (toucher == owner) {
+            current = owner;
+        } else {
+            setLoggedIn();
+        }
+        readyForDonations(current);
+        ret_state = "donate";
+    } else if (num == RCV_LM_IDLE) {
+        ret_state = "idle";
+    } else if (num == RCV_LM_INFO) {
+        stateDonation();
+    } else if (num == RCV_LM_DATA_WRITE) {
+        setDatastoreValues();
+    } else if (num == RCV_LM_FRONT_TEXT) {
+        front_texture = message;
+        linksetDataWrite(FRONT_LSD_KEY, front_texture, "Front Side Texture");
+    } else if (num == RCV_LM_GROUP) {
+        if (message == "Group") {
+            GROUP = TRUE;
+        } else if (message == "Owner") {
+            GROUP = FALSE;
+        }
+    } else if (num == RCV_LM_HOVER) {
+        boardName = message;
+        customName = boardName;
+        // Do not send a message to other boards
+        msg = "";
+        updateHoverText();
+    } else if (num == RCV_LM_PROFILE) {
+        getProfilePic(current);
+    } else if (num == RCV_LM_SHARE) {
+        twoSplit = (integer)message;
+        if (LoggedIn) {
+            tipSplit = twoSplit;
+        } else {
+            tipSplit = 0;
+        }
+        // Do not send a message to other boards
+        msg = "";
+    } else if (num == RCV_LM_READ_AMTS) {
+        // Default Pay dialog amount
+        linksetValue = llLinksetDataRead(DEF_PAY_LSD_KEY);
+        if (linksetValue != "") {
+            deflt_pay = (integer)linksetValue;
+        }
+        // Pay dialog button amounts
+        linksetValue = llLinksetDataRead(PAY_AMTS_LSD_KEY);
+        if (linksetValue != "") {
+            quick_pay = csv2list(linksetValue);
+        }
+        if (boardStatus) {
+            startDonation();
+        } else {
+            stopDonation();
+        }
+    }
+
+    if (ALL) {
+        // Send the message to other boards in region with same owner listening on this channel
+        if (msg != "") {
+            llRegionSay(objChannel, msg);
+        }
+    }
+    return ret_state;
+}
+
 default {
     state_entry() {
         // Turn off touch to pay until we are ready to receive payments
         stopDonation();
         getDefaultTextures();
-        toucher     = NULL_KEY;
+        toucher   = NULL_KEY;
         owner     = llGetOwner();
 
         // Retrieve any stored configuration or set defaults
@@ -661,72 +753,12 @@ default {
     }
 
     link_message(integer sender, integer num, string message, key id) {
-        // Message to send to other boards
-        string msg = message;
+        string ret = lnk_msg(sender, num, message, id);
 
-        if (num == RCV_LM_ALL) {
-            ALL = TRUE;
-        } else if (num == RCV_LM_SOLO) {
-            ALL = FALSE;
-        } else if (num == RCV_LM_DONATE) {
-            toucher = id;
-            if (toucher == owner) {
-                current = owner;
-            } else {
-                setLoggedIn();
-            }
-            readyForDonations(current);
+        if (ret == "donate") {
             state donate;
-        } else if (num == RCV_LM_IDLE) {
+        } else if (ret == "idle") {
             state idle;
-        } else if (num == RCV_LM_INFO) {
-            stateDonation();
-        } else if (num == RCV_LM_DATA_WRITE) {
-            setDatastoreValues();
-        } else if (num == RCV_LM_FRONT_TEXT) {
-            front_texture = message;
-            linksetDataWrite(FRONT_LSD_KEY, front_texture, "Front Side Texture");
-        } else if (num == RCV_LM_GROUP) {
-            if (message == "Group") {
-                GROUP = TRUE;
-            } else if (message == "Owner") {
-                GROUP = FALSE;
-            }
-        } else if (num == RCV_LM_HOVER) {
-            boardName = message;
-            customName = boardName;
-            // Do not send a message to other boards
-            msg = "";
-            updateHoverText();
-        } else if (num == RCV_LM_PROFILE) {
-            getProfilePic(current);
-        } else if (num == RCV_LM_SHARE) {
-            twoSplit = (integer)message;
-            if (LoggedIn) {
-                tipSplit = twoSplit;
-            } else {
-                tipSplit = 0;
-            }
-            // Do not send a message to other boards
-            msg = "";
-        } else if (num == RCV_LM_READ_AMTS) {
-            // Default Pay dialog amount
-            linksetValue = llLinksetDataRead(DEF_PAY_LSD_KEY);
-            if (linksetValue != "") {
-                deflt_pay = (integer)linksetValue;
-            }
-            // Pay dialog button amounts
-            linksetValue = llLinksetDataRead(PAY_AMTS_LSD_KEY);
-            if (linksetValue != "") {
-                quick_pay = llCSV2List(linksetValue);
-            }
-        }
-
-        if (ALL) {
-            // Send the message to other boards in region with same owner listening on this channel
-            if (msg != "") {
-                llRegionSay(objChannel, msg);
-            }
         }
     }
 
@@ -753,6 +785,17 @@ default {
         profileRequestID = NULL_KEY;
     }
 
+    linkset_data(integer action, string name, string value) {
+        if (action == LINKSETDATA_RESET) {
+            llOwnerSay("Link set datastore has been cleared.");
+            llResetScript();
+        } else if (action == LINKSETDATA_DELETE) {
+            llOwnerSay("Link set datastore key \"" + name + "\" has been deleted.");
+        } else if (action == LINKSETDATA_UPDATE) {
+            llOwnerSay("Link set datastore key \"" + name + "\" = \"" + value + "\".");
+        }
+    }
+
     changed(integer change) {
         // Check if the change event was caused by an owner change
         if (change & CHANGED_OWNER) {
@@ -765,7 +808,6 @@ default {
     }
 
     on_rez(integer num) {
-        llResetScript();
         owner = llGetOwner();
         stopDonation();
         string slurl = getBoardSlurl();
@@ -783,6 +825,7 @@ default {
         // If not stored then use defaults
         getDatastoreValues();
         setDatastoreValues();
+        llResetScript();
     }
 }
 
@@ -828,62 +871,12 @@ state donate {
     }
 
     link_message(integer sender, integer num, string message, key id) {
-        // Message to send to other boards
-        string msg = message;
+        string ret = lnk_msg(sender, num, message, id);
 
-        if (num == RCV_LM_ALL) {
-            ALL = TRUE;
-        } else if (num == RCV_LM_SOLO) {
-            ALL = FALSE;
-        } else if (num == RCV_LM_DONATE) {
-            toucher = id;
-            if (toucher == owner) {
-                current = owner;
-            } else {
-                setLoggedIn();
-            }
-            readyForDonations(current);
-            startDonation();
+        if (ret == "donate") {
             state donate;
-        } else if (num == RCV_LM_IDLE) {
+        } else if (ret == "idle") {
             state idle;
-        } else if (num == RCV_LM_INFO) {
-            stateDonation();
-        } else if (num == RCV_LM_DATA_WRITE) {
-            setDatastoreValues();
-        } else if (num == RCV_LM_FRONT_TEXT) {
-            front_texture = message;
-            linksetDataWrite(FRONT_LSD_KEY, front_texture, "Front Side Texture");
-        } else if (num == RCV_LM_GROUP) {
-            if (message == "Group") {
-                GROUP = TRUE;
-            } else if (message == "Owner") {
-                GROUP = FALSE;
-            }
-        } else if (num == RCV_LM_HOVER) {
-            boardName = message;
-            customName = boardName;
-            // Do not send a message to other boards
-            msg = "";
-            updateHoverText();
-        } else if (num == RCV_LM_PROFILE) {
-            getProfilePic(current);
-        } else if (num == RCV_LM_SHARE) {
-            twoSplit = (integer)message;
-            if (LoggedIn) {
-                tipSplit = twoSplit;
-            } else {
-                tipSplit = 0;
-            }
-            // Do not send a message to other boards
-            msg = "";
-        }
-
-        if (ALL) {
-            // Send the message to other boards in region with same owner listening on this channel
-            if (msg != "") {
-                llRegionSay(objChannel, msg);
-            }
         }
     }
 
@@ -908,6 +901,17 @@ state donate {
         if (!LoggedIn) return;
 
         checkGone(current);
+    }
+
+    linkset_data(integer action, string name, string value) {
+        if (action == LINKSETDATA_RESET) {
+            llOwnerSay("Link set datastore has been cleared.");
+            llResetScript();
+        } else if (action == LINKSETDATA_DELETE) {
+            llOwnerSay("Link set datastore key \"" + name + "\" has been deleted.");
+        } else if (action == LINKSETDATA_UPDATE) {
+            llOwnerSay("Link set datastore key \"" + name + "\" = \"" + value + "\".");
+        }
     }
 
     changed(integer change) {
@@ -959,61 +963,23 @@ state idle {
     }
 
     link_message(integer sender, integer num, string message, key id) {
-        // Message to send to other boards
-        string msg = message;
+        string ret = lnk_msg(sender, num, message, id);
 
-        if (num == RCV_LM_ALL) {
-            ALL = TRUE;
-        } else if (num == RCV_LM_SOLO) {
-            ALL = FALSE;
-        } else if (num == RCV_LM_DONATE) {
-            toucher = id;
-            if (toucher == owner) {
-                current = owner;
-            } else {
-                setLoggedIn();
-            }
-            readyForDonations(current);
+        if (ret == "donate") {
             state donate;
-        } else if (num == RCV_LM_IDLE) {
+        } else if (ret == "idle") {
             state idle;
-        } else if (num == RCV_LM_INFO) {
-            stateDonation();
-        } else if (num == RCV_LM_DATA_WRITE) {
-            setDatastoreValues();
-        } else if (num == RCV_LM_FRONT_TEXT) {
-            front_texture = message;
-            linksetDataWrite(FRONT_LSD_KEY, front_texture, "Front Side Texture");
-        } else if (num == RCV_LM_GROUP) {
-            if (message == "Group") {
-                GROUP = TRUE;
-            } else if (message == "Owner") {
-                GROUP = FALSE;
-            }
-        } else if (num == RCV_LM_HOVER) {
-            boardName = message;
-            customName = boardName;
-            // Do not send a message to other boards
-            msg = "";
-            updateHoverText();
-        } else if (num == RCV_LM_PROFILE) {
-            getProfilePic(current);
-        } else if (num == RCV_LM_SHARE) {
-            twoSplit = (integer)message;
-            if (LoggedIn) {
-                tipSplit = twoSplit;
-            } else {
-                tipSplit = 0;
-            }
-            // Do not send a message to other boards
-            msg = "";
         }
+    }
 
-        if (ALL) {
-            // Send the message to other boards in region with same owner listening on this channel
-            if (msg != "") {
-                llRegionSay(objChannel, msg);
-            }
+    linkset_data(integer action, string name, string value) {
+        if (action == LINKSETDATA_RESET) {
+            llOwnerSay("Link set datastore has been cleared.");
+            llResetScript();
+        } else if (action == LINKSETDATA_DELETE) {
+            llOwnerSay("Link set datastore key \"" + name + "\" has been deleted.");
+        } else if (action == LINKSETDATA_UPDATE) {
+            llOwnerSay("Link set datastore key \"" + name + "\" = \"" + value + "\".");
         }
     }
 
