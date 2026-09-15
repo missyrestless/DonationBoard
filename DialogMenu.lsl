@@ -41,10 +41,11 @@ integer  deflt_pay     = 250;   // Default donation amount
 list     quick_pay     = [100, 250, 500, 1000]; // quick pay buttons
 
 string  boardName;
-string  boardVersion;
 string  front_texture;
 string  linksetValue;
 string  menuMessage;
+string  boardVersion   = "";
+string  defaultVersion = "1.0.4";
 
 // Linkset Data Keys
 // Must match the definitions in DonationBoard.lsl
@@ -187,6 +188,15 @@ displayMainMenu() {
     dialogHandle = llListen(dialogChannel, "", toucher, "");
     list main_menu = [];
 
+    if (boardVersion == "") {
+        // Make sure the Donation Board version is written
+        linksetValue = llLinksetDataRead(VERSION_LSD_KEY);
+        if (linksetValue != "") {
+            boardVersion = linksetValue;
+        } else {
+            boardVersion = defaultVersion;
+        }
+    }
     menuMessage = "\nTruth & Beauty Donation Board " + boardVersion;
     if (ALL) {
         menuMessage += "\nMenu actions effect ALL BOARDS IN REGION\n";

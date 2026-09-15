@@ -372,6 +372,13 @@ getDatastoreValues() {
             tipSplit = 0;
         }
     }
+    // Make sure the Donation Board version is written
+    linksetValue = llLinksetDataRead(VERSION_LSD_KEY);
+    if (linksetValue != "") {
+        VERSION = linksetValue;
+    } else {
+        linksetDataWrite(VERSION_LSD_KEY, VERSION, "Donation Board Version");
+    }
 }
 
 setDatastoreValues() {
