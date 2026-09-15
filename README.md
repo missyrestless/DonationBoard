@@ -32,7 +32,7 @@ The Truth &amp; Beauty Donation Board includes the following features:
 
 ## Marketplace
 
-The Truth &amp; Beauty Donation Board is available on the [Second Life Marketplace](https://marketplace.secondlife.com/stores/44210).
+The Truth &amp; Beauty Donation Board is available on the [Second Life Marketplace](https://marketplace.secondlife.com/p/Truth-Beauty-Donation-Board/28680959).
 
 ## Setup
 
