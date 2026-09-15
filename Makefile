@@ -18,7 +18,7 @@ PREPROC_PATH=cpp
 # End of configuration area
 
 # Version being compiled (LSL string)
-VERSION="1.0.4"
+VERSION="1.0.5"
 
 
 # Note some of these scripts don't strictly need to be optimized for memory.

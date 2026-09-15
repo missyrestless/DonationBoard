@@ -15,6 +15,7 @@
 // MODIFICATION HISTORY
 // --------------------
 // 10-Sep-2026 - Created by Missy Restless
+// 15-Sep-2026 - Set parcel stream URL when user logs in/out
 //
 // VARIABLES
 //
@@ -23,6 +24,7 @@ integer  dialogChannel;         // Dialog Menu channel and handle
 integer  dialogHandle;
 integer  inputChannel;          // Board name Input Box channel
 integer  shareChannel;          // Share percent Input Box channel
+integer  musicChannel;          // Music URL Input Box channel
 integer  pageNumber    = 1;
 integer  first_amt     = -1;    // Pay button amounts
 integer  second_amt    = -1;
@@ -44,8 +46,9 @@ string  boardName;
 string  front_texture;
 string  linksetValue;
 string  menuMessage;
+string  musicURL       = "";
 string  boardVersion   = "";
-string  defaultVersion = "1.0.4";
+string  defaultVersion = "1.0.5";
 
 // Linkset Data Keys
 // Must match the definitions in DonationBoard.lsl
@@ -72,6 +75,9 @@ string  SHARE_LSD_KEY      = "share_percent";
 string  DEF_PAY_LSD_KEY    = "default_payment";
 // Pay dialog button amounts
 string  PAY_AMTS_LSD_KEY   = "pay_amounts";
+// Music URL prefix, with avatar key appended
+string  MUSIC_URL_LSD_KEY   = "";
+string  MUSIC_URL_PREFIX    = "url_";
 
 // Link Messages to Donation Board
 integer SND_LM_ALL         = 10;
@@ -87,6 +93,7 @@ integer SND_LM_OBJMSG      = 60;
 integer SND_LM_HOVER       = 70;
 integer SND_LM_LOGIN       = 75;
 integer SND_LM_PROFILE     = 80;
+integer SND_LM_MUSIC       = 88;
 integer SND_LM_SHARE       = 90;
 integer SND_LM_READ_AMTS   = 95;
 //
@@ -94,6 +101,7 @@ integer SND_LM_READ_AMTS   = 95;
 float   LISTEN_TTL      = 60.0;                
 integer inputListen     = -1;
 integer shareListen     = -1;
+integer musicListen     = -1;
 
 // Keys
 key owner       = NULL_KEY;
@@ -216,6 +224,7 @@ displayMainMenu() {
         menuMessage += "\nCLEAR = Reset and clear the datastore";
         menuMessage += "\nSHARE = Set the Board donation share percent";
     }
+    menuMessage += "\nMUSIC = Set the parcel music stream URL";
     menuMessage += "\nTEXTURE = Open the Board texture menu";
     menuMessage += "\nTOTAL = Toggle display of total donations";
     if (boardStatus) {
@@ -241,9 +250,9 @@ displayMainMenu() {
         main_menu += ["LOGIN"];
     }
     if (toucher == owner) {
-        main_menu += ["AMOUNTS", "CLEAR", "HOVER TXT", "SHARE", "TEXTURE", "TOTAL", "EXIT"];
+        main_menu += ["AMOUNTS", "CLEAR", "HOVER TXT", "MUSIC", "SHARE", "TEXTURE", "TOTAL", "EXIT"];
     } else {
-        main_menu += ["AMOUNTS", "HOVER TXT", "TEXTURE", "TOTAL", "EXIT"];
+        main_menu += ["AMOUNTS", "HOVER TXT", "MUSIC", "TEXTURE", "TOTAL", "EXIT"];
     }
     showMenu(menuMessage, main_menu);
 }
@@ -347,6 +356,7 @@ string lnk_msg(integer sender, integer num, string message, key id) {
     integer RCV_LM_STATUS_ON   = 200;
     integer RCV_LM_STATUS_OFF  = 210;
     integer RCV_LM_SHARE       = 250;
+    integer RCV_LM_MUSIC       = 300;
 
     string ret_state = "";
 
@@ -362,9 +372,18 @@ string lnk_msg(integer sender, integer num, string message, key id) {
     } else if (num == RCV_LM_LOGIN) {
         if ((integer)message) {
             loggedIn = TRUE;
+            MUSIC_URL_LSD_KEY = MUSIC_URL_PREFIX + (string)id;
         } else {
             loggedIn = FALSE;
+            MUSIC_URL_LSD_KEY = MUSIC_URL_PREFIX + (string)owner;
         }
+        musicURL = llLinksetDataRead(MUSIC_URL_LSD_KEY);
+        if (musicURL == "") {
+            getMusicURL(id);
+        }
+    } else if (num == RCV_LM_MUSIC) {
+        MUSIC_URL_LSD_KEY = MUSIC_URL_PREFIX + (string)id;
+        musicURL = message;
     } else if (num == RCV_LM_SHARE) {
         string split = llJsonGetValue(message, ["split"]);
         tipSplit = (integer)split;
@@ -384,6 +403,59 @@ string lnk_msg(integer sender, integer num, string message, key id) {
     return ret_state;
 }
 
+getMusicURL(key id) {
+    if (musicListen != -1) llListenRemove(musicListen);
+    musicListen = llListen(musicChannel, "", id, "");
+    llSetTimerEvent(LISTEN_TTL);
+    llTextBox(id, "\nEnter the parcel music URL to use (currently " + musicURL + ")", musicChannel);
+}
+
+processInput(string message) {
+    boardName = llStringTrim(message, STRING_TRIM);
+    linksetDataWrite(BOARD_NAME_LSD_KEY, boardName, "Donation Board Name");
+    llMessageLinked(LINK_THIS, SND_LM_HOVER, boardName, "");
+
+    if (inputListen != -1) {
+        llListenRemove(inputListen);
+        inputListen = -1;
+    }
+}
+
+processMusic(string message, key id) {
+    musicURL = message;
+    if (loggedIn) {
+        MUSIC_URL_LSD_KEY = MUSIC_URL_PREFIX + (string)id;
+    } else {
+        MUSIC_URL_LSD_KEY = MUSIC_URL_PREFIX + (string)owner;
+    }
+    linksetDataWrite(MUSIC_URL_LSD_KEY, message, "Parcel Music URL");
+
+    llMessageLinked(LINK_THIS, SND_LM_MUSIC, message, id);
+
+    if (musicListen != -1) {
+        llListenRemove(musicListen);
+        musicListen = -1;
+    }
+}
+
+processShare(string message) {
+    message = llReplaceSubString(message, "%", "", 0);
+    twoSplit = (integer)message;
+    if (loggedIn) {
+        tipSplit = twoSplit;
+    } else {
+        tipSplit = 0;
+    }
+    linksetDataWrite(SHARE_LSD_KEY, message, "Owner donation percent");
+
+    llMessageLinked(LINK_THIS, SND_LM_SHARE, message, "");
+
+    if (shareListen != -1) {
+        llListenRemove(shareListen);
+        shareListen = -1;
+    }
+}
+
 default {
     state_entry() {
         owner         = llGetOwner();
@@ -392,6 +464,7 @@ default {
         dialogChannel = 0x80000000 | (integer) ( "0x" + (string) llGetKey() );
         inputChannel  = (integer)(llFrand(-1000000000.0) - 1000000000.0);
         shareChannel  = (integer)(llFrand(-1000000000.0) - 1000000000.0);
+        musicChannel  = (integer)(llFrand(-1000000000.0) - 1000000000.0);
     }
 
     link_message(integer sender, integer num, string message, key id) {
@@ -424,30 +497,11 @@ state menu {
 
     listen(integer channel, string name, key id, string message) {
         if (channel == inputChannel) {
-            boardName = llStringTrim(message, STRING_TRIM);
-            linksetDataWrite(BOARD_NAME_LSD_KEY, boardName, "Donation Board Name");
-            llMessageLinked(LINK_THIS, SND_LM_HOVER, boardName, "");
-
-            if (inputListen != -1) {
-                llListenRemove(inputListen);
-                inputListen = -1;
-            }
+            processInput(message);
+        } else if (channel == musicChannel) {
+            processMusic(message, id);
         } else if (channel == shareChannel) {
-            message = llReplaceSubString(message, "%", "", 0);
-            twoSplit = (integer)message;
-            if (loggedIn) {
-                tipSplit = twoSplit;
-            } else {
-                tipSplit = 0;
-            }
-            linksetDataWrite(SHARE_LSD_KEY, message, "Owner donation percent");
-
-            llMessageLinked(LINK_THIS, SND_LM_SHARE, message, "");
-
-            if (shareListen != -1) {
-                llListenRemove(shareListen);
-                shareListen = -1;
-            }
+            processShare(message);
         } else if (channel == dialogChannel) {
             if (message == "STOP") {
                 llMessageLinked(LINK_THIS, SND_LM_IDLE, "Donation Stop", owner);
@@ -488,11 +542,25 @@ state menu {
             } else if ((message == "LOGIN")|| (message == "LOGOUT")) {
                 llMessageLinked(LINK_THIS, SND_LM_LOGIN, (string)loggedIn, id);
                 loggedIn = !loggedIn;
+                if (loggedIn) {
+                    MUSIC_URL_LSD_KEY = MUSIC_URL_PREFIX + (string)id;
+                    musicURL = llLinksetDataRead(MUSIC_URL_LSD_KEY);
+                    if (musicURL == "") {
+                        getMusicURL(id);
+                    } else {
+                        llMessageLinked(LINK_THIS, SND_LM_MUSIC, musicURL, id);
+                    }
+                } else {
+                    MUSIC_URL_LSD_KEY = MUSIC_URL_PREFIX + (string)owner;
+                }
             } else if (message == "HOVER TXT") {
                 if (inputListen != -1) llListenRemove(inputListen);
                 inputListen = llListen(inputChannel, "", id, "");
                 llSetTimerEvent(LISTEN_TTL);
                 llTextBox(id, "\nEnter the Donation Board hover text into the box", inputChannel);
+                return; // Exit the listen event
+            } else if (message == "MUSIC") {
+                getMusicURL(id);
                 return; // Exit the listen event
             } else if (message == "SHARE") {
                 if (shareListen != -1) llListenRemove(shareListen);
@@ -514,6 +582,7 @@ state menu {
 
     timer() {
         if (inputListen != -1) { llListenRemove(inputListen); inputListen = -1; }
+        if (musicListen != -1) { llListenRemove(musicListen); musicListen = -1; }
         if (shareListen != -1) { llListenRemove(shareListen); shareListen = -1; }
         llSetTimerEvent(0.0);
         state default;
@@ -538,52 +607,61 @@ state text {
 
     listen(integer channel, string name, key id, string message) {
         vector scale_vector;
-        if (message == "ALL") {
-            ALL = TRUE;
-            linksetDataWrite(SOLO_LSD_KEY, (string)ALL, "All or Solo Board");
-            llMessageLinked(LINK_THIS, SND_LM_ALL, "", owner);
-        } else if (message == "SOLO") {
-            ALL = FALSE;
-            linksetDataWrite(SOLO_LSD_KEY, (string)ALL, "All or Solo Board");
-            llMessageLinked(LINK_THIS, SND_LM_SOLO, "", owner);
-        } else if (message == "FLIP HORIZ") {
-            // Flips the texture horizontally on selected face, keeping vertical scale
-            scale_vector = llGetTextureScale(side_one);
-            llScaleTexture(-(scale_vector.x), scale_vector.y, side_one);
-        } else if (message == "FLIP VERT") {
-            // Flips the texture vertically on selected face, keeping horizontal scale
-            scale_vector = llGetTextureScale(side_one);
-            llScaleTexture(scale_vector.x, -(scale_vector.y), side_one);
-        } else if (message == "PROFILE") {
-            llMessageLinked(LINK_THIS, SND_LM_PROFILE, "", owner);
-        } else if (message == "RESTORE") {
-            linksetValue = llLinksetDataRead(ORIGTEXT_LSD_KEY);
-            if (linksetValue != "") {
-                llSetTexture(linksetValue, side_one);
-                front_texture = linksetValue;
-                llMessageLinked(LINK_THIS, SND_LM_FRONT_TEXT, front_texture, "");
+
+        if (channel == inputChannel) {
+            processInput(message);
+        } else if (channel == musicChannel) {
+            processMusic(message, id);
+        } else if (channel == shareChannel) {
+            processShare(message);
+        } else if (channel == dialogChannel) {
+            if (message == "ALL") {
+                ALL = TRUE;
+                linksetDataWrite(SOLO_LSD_KEY, (string)ALL, "All or Solo Board");
+                llMessageLinked(LINK_THIS, SND_LM_ALL, "", owner);
+            } else if (message == "SOLO") {
+                ALL = FALSE;
+                linksetDataWrite(SOLO_LSD_KEY, (string)ALL, "All or Solo Board");
+                llMessageLinked(LINK_THIS, SND_LM_SOLO, "", owner);
+            } else if (message == "FLIP HORIZ") {
+                // Flips the texture horizontally on selected face, keeping vertical scale
+                scale_vector = llGetTextureScale(side_one);
+                llScaleTexture(-(scale_vector.x), scale_vector.y, side_one);
+            } else if (message == "FLIP VERT") {
+                // Flips the texture vertically on selected face, keeping horizontal scale
+                scale_vector = llGetTextureScale(side_one);
+                llScaleTexture(scale_vector.x, -(scale_vector.y), side_one);
+            } else if (message == "PROFILE") {
+                llMessageLinked(LINK_THIS, SND_LM_PROFILE, "", owner);
+            } else if (message == "RESTORE") {
+                linksetValue = llLinksetDataRead(ORIGTEXT_LSD_KEY);
+                if (linksetValue != "") {
+                    llSetTexture(linksetValue, side_one);
+                    front_texture = linksetValue;
+                    llMessageLinked(LINK_THIS, SND_LM_FRONT_TEXT, front_texture, "");
+                } else {
+                    llSetTexture(front_texture, side_one);
+                    linksetDataWrite(ORIGTEXT_LSD_KEY, front_texture, "Original Board Textures");
+                }
+            } else if (message == "BACK") {
+                state menu;
+            // Handle pagination for multi page menus
+            } else if (message == "<<< Prev") {
+                pageNumber--;
+            } else if (message == "Next >>>") {
+                pageNumber++;
+            } else if (message == "EXIT") {
+                state default;
             } else {
-                llSetTexture(front_texture, side_one);
-                linksetDataWrite(ORIGTEXT_LSD_KEY, front_texture, "Original Board Textures");
-            }
-        } else if (message == "BACK") {
-            state menu;
-        // Handle pagination for multi page menus
-        } else if (message == "<<< Prev") {
-            pageNumber--;
-        } else if (message == "Next >>>") {
-            pageNumber++;
-        } else if (message == "EXIT") {
-            state default;
-        } else {
-            if (llGetInventoryType(message) == INVENTORY_TEXTURE) {
-                llSetTexture(message, side_one);
-                front_texture = message;
-                llMessageLinked(LINK_THIS, SND_LM_FRONT_TEXT, message, "");
-                // Send the texture message to other boards listening on the object channel
-                llMessageLinked(LINK_THIS, SND_LM_OBJMSG, llList2Json(JSON_OBJECT, ["texture", message, "face", (string)side_one]), owner);
-            } else {
-                llRegionSayTo(toucher, 0, "The texture is missing or not a texture: " + message);
+                if (llGetInventoryType(message) == INVENTORY_TEXTURE) {
+                    llSetTexture(message, side_one);
+                    front_texture = message;
+                    llMessageLinked(LINK_THIS, SND_LM_FRONT_TEXT, message, "");
+                    // Send the texture message to other boards listening on the object channel
+                    llMessageLinked(LINK_THIS, SND_LM_OBJMSG, llList2Json(JSON_OBJECT, ["texture", message, "face", (string)side_one]), owner);
+                } else {
+                    llRegionSayTo(toucher, 0, "The texture is missing or not a texture: " + message);
+                }
             }
         }
         // Re-send the dialog to keep the menu open
@@ -618,79 +696,87 @@ state amts {
     }
 
     listen(integer channel, string name, key id, string message) {
-        if (message == "DONE") {
-            linksetDataWrite(PAY_AMTS_LSD_KEY, llList2CSV(quick_pay), "Pay Buttons Amounts");
-            linksetDataWrite(DEF_PAY_LSD_KEY, (string)deflt_pay, "Default Pay Amount");
-            llSetPayPrice(deflt_pay, quick_pay);
-            llMessageLinked(LINK_THIS, SND_LM_READ_AMTS, "", "");
-            state default;
-        } else if (message == "BUTTON 1") {
-            first_amt = -1;
-        } else if (message == "BUTTON 2") {
-            second_amt = -1;
-        } else if (message == "BUTTON 3") {
-            third_amt = -1;
-        } else if (message == "BUTTON 4") {
-            fourth_amt = -1;
-        } else if (message == "DEFAULT") {
-            default_amt = -1;
-        } else if (message == "OWNER") {
-            if (id == owner) {
-                GROUP = FALSE;
-                llMessageLinked(LINK_THIS, SND_LM_GROUP, "Owner", id);
-                linksetDataWrite(GROUP_LSD_KEY, (string)GROUP, "Group Access");
+        if (channel == inputChannel) {
+            processInput(message);
+        } else if (channel == musicChannel) {
+            processMusic(message, id);
+        } else if (channel == shareChannel) {
+            processShare(message);
+        } else if (channel == dialogChannel) {
+            if (message == "DONE") {
+                linksetDataWrite(PAY_AMTS_LSD_KEY, llList2CSV(quick_pay), "Pay Buttons Amounts");
+                linksetDataWrite(DEF_PAY_LSD_KEY, (string)deflt_pay, "Default Pay Amount");
+                llSetPayPrice(deflt_pay, quick_pay);
+                llMessageLinked(LINK_THIS, SND_LM_READ_AMTS, "", "");
+                state default;
+            } else if (message == "BUTTON 1") {
+                first_amt = -1;
+            } else if (message == "BUTTON 2") {
+                second_amt = -1;
+            } else if (message == "BUTTON 3") {
+                third_amt = -1;
+            } else if (message == "BUTTON 4") {
+                fourth_amt = -1;
+            } else if (message == "DEFAULT") {
+                default_amt = -1;
+            } else if (message == "OWNER") {
+                if (id == owner) {
+                    GROUP = FALSE;
+                    llMessageLinked(LINK_THIS, SND_LM_GROUP, "Owner", id);
+                    linksetDataWrite(GROUP_LSD_KEY, (string)GROUP, "Group Access");
+                } else {
+                    if (id) llRegionSayTo(id, 0, "Only the owner can set the Boards to owner only");
+                }
+            } else if (message == "HOVER TXT") {
+                if (inputListen != -1) llListenRemove(inputListen);
+                inputListen = llListen(inputChannel, "", id, "");
+                llSetTimerEvent(LISTEN_TTL);
+                llTextBox(id, "\nEnter the Donation Board hover text into the box)", inputChannel);
+                return; // Exit the listen event
+            } else if (message == "TEXTURE") {
+                state text;
+            } else if (message == "EXIT") {
+                state default;
             } else {
-                if (id) llRegionSayTo(id, 0, "Only the owner can set the Boards to owner only");
+                if (first_amt == -1) {
+                    if (message == "SKIP") {
+                        first_amt = llList2Integer(quick_pay, 0);
+                    } else {
+                        quick_pay = llListReplaceList(quick_pay, [message], 0, 0);
+                        first_amt = llList2Integer(quick_pay, 0);
+                    }
+                } else if (second_amt == -1) {
+                    if (message == "SKIP") {
+                        second_amt = llList2Integer(quick_pay, 1);
+                    } else {
+                        quick_pay = llListReplaceList(quick_pay, [message], 1, 1);
+                        second_amt = llList2Integer(quick_pay, 1);
+                    }
+                } else if (third_amt == -1) {
+                    if (message == "SKIP") {
+                        third_amt = llList2Integer(quick_pay, 2);
+                    } else {
+                        quick_pay = llListReplaceList(quick_pay, [message], 2, 2);
+                        third_amt = llList2Integer(quick_pay, 2);
+                    }
+                } else if (fourth_amt == -1) {
+                    if (message == "SKIP") {
+                        fourth_amt = llList2Integer(quick_pay, 3);
+                    } else {
+                        quick_pay = llListReplaceList(quick_pay, [message], 3, 3);
+                        fourth_amt = llList2Integer(quick_pay, 3);
+                    }
+                } else if (default_amt == -1) {
+                    if (message == "SKIP") {
+                        default_amt = deflt_pay;
+                    } else {
+                        deflt_pay = (integer)message;
+                        default_amt = deflt_pay;
+                    }
+                }
+                linksetDataWrite(PAY_AMTS_LSD_KEY, llList2CSV(quick_pay), "Pay Buttons Amounts");
+                linksetDataWrite(DEF_PAY_LSD_KEY, (string)deflt_pay, "Default Pay Amount");
             }
-        } else if (message == "HOVER TXT") {
-            if (inputListen != -1) llListenRemove(inputListen);
-            inputListen = llListen(inputChannel, "", id, "");
-            llSetTimerEvent(LISTEN_TTL);
-            llTextBox(id, "\nEnter the Donation Board hover text into the box)", inputChannel);
-            return; // Exit the listen event
-        } else if (message == "TEXTURE") {
-            state text;
-        } else if (message == "EXIT") {
-            state default;
-        } else {
-            if (first_amt == -1) {
-                if (message == "SKIP") {
-                    first_amt = llList2Integer(quick_pay, 0);
-                } else {
-                    quick_pay = llListReplaceList(quick_pay, [message], 0, 0);
-                    first_amt = llList2Integer(quick_pay, 0);
-                }
-            } else if (second_amt == -1) {
-                if (message == "SKIP") {
-                    second_amt = llList2Integer(quick_pay, 1);
-                } else {
-                    quick_pay = llListReplaceList(quick_pay, [message], 1, 1);
-                    second_amt = llList2Integer(quick_pay, 1);
-                }
-            } else if (third_amt == -1) {
-                if (message == "SKIP") {
-                    third_amt = llList2Integer(quick_pay, 2);
-                } else {
-                    quick_pay = llListReplaceList(quick_pay, [message], 2, 2);
-                    third_amt = llList2Integer(quick_pay, 2);
-                }
-            } else if (fourth_amt == -1) {
-                if (message == "SKIP") {
-                    fourth_amt = llList2Integer(quick_pay, 3);
-                } else {
-                    quick_pay = llListReplaceList(quick_pay, [message], 3, 3);
-                    fourth_amt = llList2Integer(quick_pay, 3);
-                }
-            } else if (default_amt == -1) {
-                if (message == "SKIP") {
-                    default_amt = deflt_pay;
-                } else {
-                    deflt_pay = (integer)message;
-                    default_amt = deflt_pay;
-                }
-            }
-            linksetDataWrite(PAY_AMTS_LSD_KEY, llList2CSV(quick_pay), "Pay Buttons Amounts");
-            linksetDataWrite(DEF_PAY_LSD_KEY, (string)deflt_pay, "Default Pay Amount");
         }
         // Re-send the dialog to keep the menu open
         displayAmtsMenu();
@@ -698,6 +784,7 @@ state amts {
 
     timer() {
         if (inputListen != -1) { llListenRemove(inputListen); inputListen = -1; }
+        if (musicListen != -1) { llListenRemove(musicListen); musicListen = -1; }
         if (shareListen != -1) { llListenRemove(shareListen); shareListen = -1; }
         llSetTimerEvent(0.0);
         state default;
@@ -731,6 +818,10 @@ state confirm {
                 llOwnerSay("Clear linkset storage action cancelled.");
             }
             state menu;
+        } else if (channel == musicChannel) {
+            processMusic(message, id);
+        } else if (channel == shareChannel) {
+            processShare(message);
         }
     }
 
