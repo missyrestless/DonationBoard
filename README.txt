@@ -4,6 +4,8 @@ See https://github.com/missyrestless/DonationBoard#readme for the latest updated
 
 Rez a Truth & Beauty Donation Board and position it where you want. It automatically configures as a donation board for the parcel in which it is rezzed. Set the donation board group and members of that group can login, the board automatically converting to a shared tip system.
 
+Unlike other advanced tip jar and donation board systems, the Truth &amp; Beauty Donation Board does not rely on an external 3rd party web service or website. All functionality is implemented in the board's scripts and will continue to function without dependence on anyone else or any service maintained by others.
+
 Features
 =========
 
@@ -59,6 +61,13 @@ The main menu includes the following buttons:
     - Owner only access
 - **GROUP**
     - Allow group members to login/manage the boards
+- **LOGIN**
+    - Login to the board as a DJ or event coordinator
+- **LOGOUT**
+    - Exit role as DJ or event coordinator, board reverts to accepting parcel donations
+    - Leaving the area will automatically logout any logged in user
+- **AMOUNTS**
+    - Set the suggested amounts in the Pay popup, including the default pay amount
 - **CLEAR**
     - Clear all stored configuration and reset to original state
 - **HOVER TXT**

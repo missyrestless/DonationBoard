@@ -477,6 +477,7 @@ state menu {
                 state confirm;
             } else if ((message == "LOGIN")|| (message == "LOGOUT")) {
                 llMessageLinked(LINK_THIS, SND_LM_LOGIN, (string)loggedIn, id);
+                loggedIn = !loggedIn;
             } else if (message == "HOVER TXT") {
                 if (inputListen != -1) llListenRemove(inputListen);
                 inputListen = llListen(inputChannel, "", id, "");

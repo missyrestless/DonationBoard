@@ -18,5 +18,6 @@ make
 
   cp DonationBoard.lslo ${DEST}/DonationBoard
   cp DialogMenu.lslo ${DEST}/DialogMenu
-  cp COPYRIGHT LICENSE VERSION ${DEST}
+  cp COPYRIGHT LICENSE ${DEST}
+  cp README.txt ${DEST}/README
 }
