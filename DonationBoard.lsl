@@ -19,10 +19,11 @@
 //            --------------------                //
 // 2026-Sep-07 Created                            //
 // 2026-Sep-08 All linkset data store and menu    //
+// 2026-Sep-15 Auto set parcel stream URL         //
 //                                                //
 ////////////////////////////////////////////////////
 
-string   VERSION = "1.0.4";
+string   VERSION = "1.0.5";
 
 integer  ALL     = TRUE;      // Set to TRUE to effect all boards, FALSE for single board
 integer  GROUP   = FALSE;     // Set to TRUE to allow group members to manage, FALSE for owner only
@@ -54,9 +55,11 @@ key      profileRequestID;
 key      owner;
 key      toucher = NULL_KEY;
 
-string   VERT_SPACE  = "\n \n \n \n \n \n ";
-string   sideTexture = "Sides";
-string   customName  = "";
+string   DEF_MUSIC_URL  = "http://server1.chilltrax.com:9000";
+string   VERT_SPACE     = "\n \n \n \n \n \n ";
+string   sideTexture    = "Sides";
+string   customName     = "";
+string   musicURL       = "";
 string   boardName;
 string   front_texture;
 string   orig_texture;
@@ -87,6 +90,9 @@ string  SHARE_LSD_KEY      = "share_percent";
 string  DEF_PAY_LSD_KEY    = "default_payment";
 // Pay dialog button amounts
 string  PAY_AMTS_LSD_KEY   = "pay_amounts";
+// Music URL prefix, with avatar key appended
+string  MUSIC_URL_LSD_KEY  = "";
+string  MUSIC_URL_PREFIX   = "url_";
 //
 // Linked Message Numbers
 //
@@ -97,6 +103,7 @@ integer SND_LM_LOGIN       = 175;
 integer SND_LM_STATUS_ON   = 200;
 integer SND_LM_STATUS_OFF  = 210;
 integer SND_LM_SHARE       = 250;
+integer SND_LM_MUSIC       = 300;
 
 updateHoverText() {
     // string text = boardName + " Donation Board\n";
@@ -165,6 +172,12 @@ stateDonation() {
         }
     } else {
         msg += "\nNo user currently logged in, all donations to owner";
+    }
+    linksetValue = llLinksetDataRead(MUSIC_URL_LSD_KEY);
+    if (linksetValue != "") {
+        msg += "\nAuto Set parcel stream URL = " + linksetValue;
+    } else {
+        msg += "\nNo parcel stream URL currently set";
     }
     msg += "\nTotal contributions from this board = L$" + (string)totalDonations;
 
@@ -301,6 +314,7 @@ readyForDonations(key recKey) {
         llInstantMessage(current, "You are now logged in.");
         llSetTimerEvent(checkInterval);
     }
+    setMusicURL("", current);
     llMessageLinked(LINK_THIS, SND_LM_LOGIN, (string)loggedIn, current);
     getProfilePic(current);
     llMessageLinked(LINK_THIS, SND_LM_SHARE, llList2Json(JSON_OBJECT, ["split", (string)tipSplit, "share", (string)twoSplit]), "");
@@ -361,6 +375,8 @@ getDatastoreValues() {
     if (linksetValue != "") {
         quick_pay = csv2list(linksetValue);
     }
+    // Parcel music stream URL
+    musicURL = llLinksetDataRead(MUSIC_URL_LSD_KEY);
     // Owner share percent
     linksetValue = llLinksetDataRead(SHARE_LSD_KEY);
     if (linksetValue != "") {
@@ -407,6 +423,10 @@ setDatastoreValues() {
     linksetDataWrite(PAY_AMTS_LSD_KEY, llList2CSV(quick_pay), "Pay Buttons Amounts");
     // Owner share percent
     linksetDataWrite(SHARE_LSD_KEY, (string)tipSplit, "Owner donation percent");
+    // Parcel music stream URL
+    if ((musicURL != "") && (MUSIC_URL_LSD_KEY != "")) {
+        linksetDataWrite(MUSIC_URL_LSD_KEY, musicURL, "Parcel Music URL");
+    }
 }
 
 // Writes the provided key/value pair to the prim's linkset datastore
@@ -477,6 +497,7 @@ checkGone(key avatar) {
         loggedIn = FALSE;
         tipSplit = 0;
         current = owner;
+        setMusicURL("", current);
         llMessageLinked(LINK_THIS, SND_LM_LOGIN, (string)loggedIn, current);
         if (customName == "") {
             boardName = llKey2Name(current) + " Tip Board";
@@ -489,22 +510,25 @@ checkGone(key avatar) {
     }
 }
 
-setloggedIn() {
+setLoggedIn() {
     if (!loggedIn) {
         current = toucher;
         boardName = llKey2Name(current) + " Tip Board";
         loggedIn = TRUE;
+        setMusicURL("", current);
         llMessageLinked(LINK_THIS, SND_LM_LOGIN, (string)loggedIn, current);
         tipSplit = twoSplit;
         getProfilePic(current);
 
         llSetText("🎧  " + boardName + " 🎧\nTips Welcome!" + VERT_SPACE, <0.5,1.0,0.5>, 1.0);
         llInstantMessage(current, "You are now logged in as DJ.");
+        llMessageLinked(LINK_THIS, SND_LM_SHARE, llList2Json(JSON_OBJECT, ["split", (string)tipSplit, "share", (string)twoSplit]), "");
         llSetTimerEvent(checkInterval);
     } else if (toucher == current) {
+        current = owner;
         loggedIn = FALSE;
         tipSplit = 0;
-        current = owner;
+        setMusicURL("", current);
         llMessageLinked(LINK_THIS, SND_LM_LOGIN, (string)loggedIn, current);
         if (customName == "") {
             boardName = llKey2Name(current) + " Tip Board";
@@ -514,11 +538,11 @@ setloggedIn() {
         getProfilePic(current);
         startDonation();
         llInstantMessage(toucher, "You have logged out.");
+        llMessageLinked(LINK_THIS, SND_LM_SHARE, llList2Json(JSON_OBJECT, ["split", (string)tipSplit, "share", (string)twoSplit]), "");
         llSetTimerEvent(0.0);
     } else {
         llInstantMessage(toucher, "A DJ is already logged in.");
     }
-    llMessageLinked(LINK_THIS, SND_LM_SHARE, llList2Json(JSON_OBJECT, ["split", (string)tipSplit, "share", (string)twoSplit]), "");
 }
 
 particlesOff() {
@@ -628,8 +652,25 @@ initPrim() {
     integer backFace = 5;
     string  slurl    = getBoardSlurl();
     string  parcel   = getParcelName();
+    string  currURL  = llGetParcelMusicURL();
 
     owner = llGetOwner();
+
+    // Get and set the original parcel stream URL
+    MUSIC_URL_LSD_KEY = MUSIC_URL_PREFIX + (string)owner;
+    musicURL = llLinksetDataRead(MUSIC_URL_LSD_KEY);
+    if (musicURL == "") {
+        // No parcel stream URL is stored
+        if (currURL == "") {
+            // No parcel stream URL is set or we can't get it
+            llSetParcelMusicURL(DEF_MUSIC_URL);
+            musicURL = DEF_MUSIC_URL;
+        } else {
+            musicURL = currURL;
+        }
+        linksetDataWrite(MUSIC_URL_LSD_KEY, musicURL, "Parcel Music URL");
+    }
+    llMessageLinked(LINK_THIS, SND_LM_MUSIC, musicURL, owner);
 
     // Set default texture and glow of beveled sides and back
     if (llGetInventoryType(sideTexture) == INVENTORY_TEXTURE) {
@@ -704,6 +745,7 @@ string lnk_msg(integer sender, integer num, string message, key id) {
     integer RCV_LM_HOVER       = 70;
     integer RCV_LM_LOGIN       = 75;
     integer RCV_LM_PROFILE     = 80;
+    integer RCV_LM_MUSIC       = 88;
     integer RCV_LM_SHARE       = 90;
     integer RCV_LM_READ_AMTS   = 95;
 
@@ -720,7 +762,7 @@ string lnk_msg(integer sender, integer num, string message, key id) {
         if (toucher == owner) {
             current = owner;
         } else {
-            setloggedIn();
+            setLoggedIn();
         }
         readyForDonations(current);
         ret_state = "donate";
@@ -741,7 +783,7 @@ string lnk_msg(integer sender, integer num, string message, key id) {
         }
     } else if (num == RCV_LM_LOGIN) {
         toucher = id;
-        setloggedIn();
+        setLoggedIn();
     } else if (num == RCV_LM_HOVER) {
         boardName = message;
         customName = boardName;
@@ -750,6 +792,10 @@ string lnk_msg(integer sender, integer num, string message, key id) {
         updateHoverText();
     } else if (num == RCV_LM_PROFILE) {
         getProfilePic(current);
+    } else if (num == RCV_LM_MUSIC) {
+        setMusicURL(message, id);
+        // Do not send a message to other boards
+        msg = "";
     } else if (num == RCV_LM_SHARE) {
         twoSplit = (integer)message;
         if (loggedIn) {
@@ -787,6 +833,23 @@ string lnk_msg(integer sender, integer num, string message, key id) {
         }
     }
     return ret_state;
+}
+
+setMusicURL(string url, key id) {
+    MUSIC_URL_LSD_KEY = MUSIC_URL_PREFIX + (string)id;
+    musicURL = llLinksetDataRead(MUSIC_URL_LSD_KEY);
+    if (musicURL != url) {
+        if (url != "") {
+            linksetDataWrite(MUSIC_URL_LSD_KEY, url, "Parcel Music URL");
+            musicURL = url;
+        }
+    }
+    if (musicURL != "") {
+        llMessageLinked(LINK_THIS, SND_LM_MUSIC, musicURL, id);
+        if (llGetParcelMusicURL() != musicURL) {
+            llSetParcelMusicURL(musicURL);
+        }
+    }
 }
 
 default {
@@ -932,7 +995,7 @@ state donate {
                 if (toucher == owner) {
                     llMessageLinked(LINK_THIS, SND_LM_MENU, "", toucher);
                 } else {
-                    setloggedIn();
+                    setLoggedIn();
                 }
                 readyForDonations(current);
                 startDonation();
