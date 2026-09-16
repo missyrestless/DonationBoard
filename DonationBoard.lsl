@@ -20,6 +20,8 @@
 // 2026-Sep-07 Created                            //
 // 2026-Sep-08 All linkset data store and menu    //
 // 2026-Sep-15 Auto set parcel stream URL         //
+// 2026-Sep-16 Set owner key before group deed    //
+//             Set owner key in linkset datastore //
 //                                                //
 ////////////////////////////////////////////////////
 
@@ -69,6 +71,8 @@ string   linksetValue;
 // Linkset Data Keys
 // Must match the definitions in DialogMenu.lsl
 //
+// Owner of Donation Board object, prior to deeding to group
+string  OWNER_LSD_KEY      = "owner";
 // Donation Board version
 string  VERSION_LSD_KEY    = "version";
 // Payment Avatar UUID linkset data key
@@ -645,6 +649,16 @@ sparkle() {
     ]);
 }
 
+setOwner() {
+    linksetValue = llLinksetDataRead(OWNER_LSD_KEY);
+    if (linksetValue == "") {
+        owner = llGetOwner();
+        linksetDataWrite(OWNER_LSD_KEY, (string)owner, "Donation Board Owner");
+    } else {
+        owner = (key)linksetValue;
+    }
+}
+
 initPrim() {
     integer i;
     integer backFace = 5;
@@ -652,7 +666,7 @@ initPrim() {
     string  parcel   = getParcelName();
     string  currURL  = llGetParcelMusicURL();
 
-    owner = llGetOwner();
+    setOwner();
 
     // Get and set the original parcel stream URL
     STREAM_URL_LSD_KEY = STREAM_URL_PREFIX + (string)owner;
@@ -870,7 +884,10 @@ default {
         stopDonation();
         getDefaultTextures();
         toucher   = NULL_KEY;
-        owner     = llGetOwner();
+        // setOwner() sets the owner global variable and stores that value in the linkset datastore
+        // Needed to work with group owned boards since llGetOwner() returns the group key
+        // We need to know which user has owner management privileges
+        setOwner();
 
         // Set Prim face textures if not already set
         if (needInit) {
@@ -1011,6 +1028,7 @@ state donate {
                 }
                 readyForDonations(current);
                 startDonation();
+                if (loggedIn) llMessageLinked(LINK_THIS, SND_LM_MENU, "", toucher);
             } else {
                 howtoPay();
                 toucher = NULL_KEY;

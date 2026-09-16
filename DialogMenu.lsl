@@ -16,6 +16,8 @@
 // --------------------
 // 10-Sep-2026 - Created by Missy Restless
 // 15-Sep-2026 - Set parcel stream URL when user logs in/out
+// 16-Sep-2026 - Store owner key in linkset datastore
+//               Preserve owner key across linkset datastore clear
 //
 // VARIABLES
 //
@@ -53,8 +55,10 @@ string  defaultVersion = "1.0.5";
 // Linkset Data Keys
 // Must match the definitions in DonationBoard.lsl
 //
+// Owner of Donation Board object, prior to deeding to group
+string  OWNER_LSD_KEY      = "owner";
 // Donation Board version linkset data key
-string  VERSION_LSD_KEY   = "version";
+string  VERSION_LSD_KEY    = "version";
 // Payment Avatar UUID linkset data key
 string  PAY_UUID_LSD_KEY   = "payment_uuid";
 // Total amount received linkset data key
@@ -357,6 +361,16 @@ integer linksetDataWrite(string lsdKey, string value, string cfg) {
     return returnCode;
 }
 
+setOwner() {
+    linksetValue = llLinksetDataRead(OWNER_LSD_KEY);
+    if (linksetValue == "") {
+        owner = llGetOwner();
+        linksetDataWrite(OWNER_LSD_KEY, (string)owner, "Donation Board Owner");
+    } else {
+        owner = (key)linksetValue;
+    }
+}
+
 string lnk_msg(integer sender, integer num, string message, key id) {
     // Receive from Donation Board
     integer RCV_LM_MENU        = 100;
@@ -467,7 +481,7 @@ processShare(string message) {
 
 default {
     state_entry() {
-        owner         = llGetOwner();
+        setOwner();
 
         // Compute a negative communications channel based on prim UUID
         dialogChannel = 0x80000000 | (integer) ( "0x" + (string) llGetKey() );
@@ -828,7 +842,10 @@ state confirm {
             llListenRemove(inputListen);
             inputListen = -1;
             if (message == "YES") {
+                // Preserve the owner key
+                linksetValue = llLinksetDataRead(OWNER_LSD_KEY);
                 llLinksetDataReset();
+                linksetDataWrite(OWNER_LSD_KEY, linksetValue, "Donation Board Owner");
                 llResetScript();
             } else if (message == "NO") {
                 if (debug) llOwnerSay("Clear linkset storage action cancelled.");
