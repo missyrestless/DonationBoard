@@ -8,6 +8,10 @@ Rez as many boards as you need, they are Copy/Modify and only a single prim.
 
 Unlike other advanced tip jar and donation board systems, the Truth &amp; Beauty Donation Board does not rely on an external 3rd party web service or website. All functionality is implemented in the board's scripts and will continue to function without dependence on anyone else or any service maintained by others.
 
+## Marketplace
+
+The Truth &amp; Beauty Donation Board is available on the [Second Life Marketplace](https://marketplace.secondlife.com/p/Truth-Beauty-Donation-Board/28680959).
+
 ## Features
 
 The Truth &amp; Beauty Donation Board includes the following features:
@@ -17,6 +21,7 @@ The Truth &amp; Beauty Donation Board includes the following features:
     - This default auto-configuration sends 100% of the donations to the owner of the board
 - Donations can be split between a group member who is near the board and the owner
     - Easily converts between a parcel donation board and an event or DJ tip board
+- The parcel stream URL will automatically change to the logged in user's setting
 - All Truth &amp; Beauty Donation Boards in the same region can be managed from any of them simultaneously
 - A dialog menu can be used to further customize the board (see below for details)
 - All configuration settings are stored in the prim's linkset datastore
@@ -30,10 +35,6 @@ The Truth &amp; Beauty Donation Board includes the following features:
 - The `DonationBoard` and `DialogMenu` LSL scripts are low lag and have been optimized with `LSL-PyOptimizer`
 - The `DonationBoard` and `DialogMenu` scripts are Open Source and can be viewed, copied, and modified freely within the terms of the license
 
-## Marketplace
-
-The Truth &amp; Beauty Donation Board is available on the [Second Life Marketplace](https://marketplace.secondlife.com/p/Truth-Beauty-Donation-Board/28680959).
-
 ## Setup
 
 The Truth &amp; Beauty Donation Board auto-configures when rezzed and is active immediately.
@@ -46,9 +47,37 @@ It is necessary to give the board permission to take money in order to support t
 
 The Truth &amp; Beauty Donation Board can set the parcel music stream URL. In order to do so, the board must be owned by the same owner as the land. If the parcel has been deeded to a group then the Donation Board must also be deeded to the same group.
 
-To configure the board's group, the owner can right-click the board and select Edit. In the General tab of the Edit window, click the wrench icon to the right of the Group: setting. Select the group to use in the Group chooser popup.
+#### Individually owned parcels
 
-Once the desired group is set, click the Share tick box below the group in the Edit window. Click the Deed button and Close the Edit window.
+If you are the owner of the parcel ("About Land" shows you as the owner), no additional configuration is needed.
+
+#### Group owned parcels
+
+If "About Land" shows the name of a group as owner, the parcel is group owned. In this case, you need to deed the Donation Board object to group.
+
+##### Group Deeding
+
+If your parcel is owned by a group, but does not have group deeding enabled, you need to ask the owner of your land to enable group deeding.
+
+##### Set the Donation Board Group
+
+First, make sure the board belongs to the correct group. The owner can right-click the board and select Edit. If the Group: setting in the General tab of the Edit window is set to a group different than that shown in "About Land" then click the wrench icon to the right of the Group: setting. Select the group to use in the Group chooser popup.
+
+##### Deed the Donation Board to the Group
+
+Once the desired group is set, click the Share checkbox below the group in the Edit window. Click the Deed button and Close the Edit window (Edit → General → Share [checkbox] → Deed).
+
+##### Summary of Group Deeding
+
+If the parcel is owned by an individual then no group configuration is necessary.
+
+If the parcel is group owned:
+
+- The board must be set to the desired group
+- Group deeding must be enabled on the parcel
+- The board must be deeded to that group
+
+If unable to deed the board, it will still work but the parcel stream URL management function will be disabled.
 
 **[Note:]** It is recommended to take a copy of the Donation Board back into your inventory **Before Deeding** it to a group. This makes it easier to modify the board later if needed and ensures you will always have a copy to re-deed if necessary.
 
@@ -98,9 +127,11 @@ The main menu includes the following buttons:
 
 ## Splitting Donations
 
-The Truth & Beauty Donation Board is configured to split donations between the owner and a logged in user.
+The Truth &amp; Beauty Donation Board is configured to split donations between the owner and a logged in user.
 
 In order for the donation splitting feature to work, the request for Debit permission must have been accepted.
+
+If Debit permission is denied then the board will still function but splitting donations will be disabled.
 
 Members of the board's group can login by touching the board.
 
@@ -115,7 +146,6 @@ The owner can modify the donation percent shared with logged in users by opening
 ### Summary of Donation Sharing
 
 - Debit permission must be granted
-- The board must be set to the desired group
 - Group sharing must be enabled by clicking the GROUP menu button
 - Percent split to the logged in user can be configured (default: 80%)
 - Group members must wear the group tag in order to login
