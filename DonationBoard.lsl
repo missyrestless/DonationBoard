@@ -35,6 +35,7 @@ integer  listenChannel  = 0;   // Channel for chat and gestures
 integer  loggedIn       = FALSE;
 integer  needInit       = TRUE; // Prim initialization is needed
 integer  showTotal      = TRUE;
+integer  debug          = FALSE;
 integer  twoSplit       = 80;  // % shared if group member logged in
 integer  tipSplit       = 0;   // % shared
 integer  totalDonations = 0;
@@ -55,11 +56,11 @@ key      profileRequestID;
 key      owner;
 key      toucher = NULL_KEY;
 
-string   DEF_MUSIC_URL  = "http://server1.chilltrax.com:9000";
+string   DEF_STREAM_URL = "http://server1.chilltrax.com:9000";
 string   VERT_SPACE     = "\n \n \n \n \n \n ";
 string   sideTexture    = "Sides";
 string   customName     = "";
-string   musicURL       = "";
+string   streamURL      = "";
 string   boardName;
 string   front_texture;
 string   orig_texture;
@@ -90,9 +91,9 @@ string  SHARE_LSD_KEY      = "share_percent";
 string  DEF_PAY_LSD_KEY    = "default_payment";
 // Pay dialog button amounts
 string  PAY_AMTS_LSD_KEY   = "pay_amounts";
-// Music URL prefix, with avatar key appended
-string  MUSIC_URL_LSD_KEY  = "";
-string  MUSIC_URL_PREFIX   = "url_";
+// Stream URL prefix, with avatar key appended
+string  STREAM_URL_LSD_KEY = "";
+string  STREAM_URL_PREFIX  = "url_";
 //
 // Linked Message Numbers
 //
@@ -103,7 +104,7 @@ integer SND_LM_LOGIN       = 175;
 integer SND_LM_STATUS_ON   = 200;
 integer SND_LM_STATUS_OFF  = 210;
 integer SND_LM_SHARE       = 250;
-integer SND_LM_MUSIC       = 300;
+integer SND_LM_STREAM      = 300;
 
 updateHoverText() {
     // string text = boardName + " Donation Board\n";
@@ -136,8 +137,6 @@ updateHoverText() {
 
 stopDonation() {
     llSetClickAction(CLICK_ACTION_TOUCH);
-    // llOwnerSay("Hiding Pay Buttons");
-    // llSetPayPrice(PAY_HIDE, [PAY_HIDE ,PAY_HIDE, PAY_HIDE, PAY_HIDE]);
     llSetPayPrice(deflt_pay, quick_pay);
     boardStatus = FALSE;
     updateHoverText();
@@ -146,7 +145,6 @@ stopDonation() {
 
 startDonation() {
     llSetClickAction(CLICK_ACTION_PAY);
-    // llOwnerSay("Pay Default: " + (string)deflt_pay + " Buttons: " + llDumpList2String(quick_pay, ", "));
     llSetPayPrice(deflt_pay, quick_pay);
     boardStatus = TRUE;
     updateHoverText();
@@ -173,7 +171,7 @@ stateDonation() {
     } else {
         msg += "\nNo user currently logged in, all donations to owner";
     }
-    linksetValue = llLinksetDataRead(MUSIC_URL_LSD_KEY);
+    linksetValue = llLinksetDataRead(STREAM_URL_LSD_KEY);
     if (linksetValue != "") {
         msg += "\nAuto Set parcel stream URL = " + linksetValue;
     } else {
@@ -314,7 +312,7 @@ readyForDonations(key recKey) {
         llInstantMessage(current, "You are now logged in.");
         llSetTimerEvent(checkInterval);
     }
-    setMusicURL("", current);
+    setStreamURL("", current);
     llMessageLinked(LINK_THIS, SND_LM_LOGIN, (string)loggedIn, current);
     getProfilePic(current);
     llMessageLinked(LINK_THIS, SND_LM_SHARE, llList2Json(JSON_OBJECT, ["split", (string)tipSplit, "share", (string)twoSplit]), "");
@@ -375,8 +373,8 @@ getDatastoreValues() {
     if (linksetValue != "") {
         quick_pay = csv2list(linksetValue);
     }
-    // Parcel music stream URL
-    musicURL = llLinksetDataRead(MUSIC_URL_LSD_KEY);
+    // Parcel stream URL
+    streamURL = llLinksetDataRead(STREAM_URL_LSD_KEY);
     // Owner share percent
     linksetValue = llLinksetDataRead(SHARE_LSD_KEY);
     if (linksetValue != "") {
@@ -423,9 +421,9 @@ setDatastoreValues() {
     linksetDataWrite(PAY_AMTS_LSD_KEY, llList2CSV(quick_pay), "Pay Buttons Amounts");
     // Owner share percent
     linksetDataWrite(SHARE_LSD_KEY, (string)tipSplit, "Owner donation percent");
-    // Parcel music stream URL
-    if ((musicURL != "") && (MUSIC_URL_LSD_KEY != "")) {
-        linksetDataWrite(MUSIC_URL_LSD_KEY, musicURL, "Parcel Music URL");
+    // Parcel stream URL
+    if ((streamURL != "") && (STREAM_URL_LSD_KEY != "")) {
+        linksetDataWrite(STREAM_URL_LSD_KEY, streamURL, "Parcel Stream URL");
     }
 }
 
@@ -435,11 +433,11 @@ integer linksetDataWrite(string lsdKey, string value, string cfg) {
     integer returnCode = llLinksetDataWrite(lsdKey, val);
     if (returnCode == LINKSETDATA_OK) {
         if (owner) {
-            llRegionSayTo(owner, 0, "[Donation Board] " + cfg + " saved.");
+            if (debug) llRegionSayTo(owner, 0, "[Donation Board] " + cfg + " saved.");
         }
     } else if (returnCode != LINKSETDATA_NOUPDATE) {
         if (owner) {
-            llRegionSayTo(owner, 0, "[Donation Board] " + cfg + " save failed (code " + (string)returnCode + ").");
+            if (debug) llRegionSayTo(owner, 0, "[Donation Board] " + cfg + " save failed (code " + (string)returnCode + ").");
         }
     }
     return returnCode;
@@ -481,7 +479,7 @@ processMessage(integer chn, string msg) {
             if (llGetInventoryType(txt) == INVENTORY_TEXTURE) {
                 llSetTexture(txt, (integer)fce);
             } else {
-                llOwnerSay("The texture is missing or not a texture: " + txt);
+                if (debug) llOwnerSay("The texture is missing or not a texture: " + txt);
             }
         }
     }
@@ -497,7 +495,7 @@ checkGone(key avatar) {
         loggedIn = FALSE;
         tipSplit = 0;
         current = owner;
-        setMusicURL("", current);
+        setStreamURL("", current);
         llMessageLinked(LINK_THIS, SND_LM_LOGIN, (string)loggedIn, current);
         if (customName == "") {
             boardName = llKey2Name(current) + " Tip Board";
@@ -515,7 +513,7 @@ setLoggedIn() {
         current = toucher;
         boardName = llKey2Name(current) + " Tip Board";
         loggedIn = TRUE;
-        setMusicURL("", current);
+        setStreamURL("", current);
         llMessageLinked(LINK_THIS, SND_LM_LOGIN, (string)loggedIn, current);
         tipSplit = twoSplit;
         getProfilePic(current);
@@ -528,7 +526,7 @@ setLoggedIn() {
         current = owner;
         loggedIn = FALSE;
         tipSplit = 0;
-        setMusicURL("", current);
+        setStreamURL("", current);
         llMessageLinked(LINK_THIS, SND_LM_LOGIN, (string)loggedIn, current);
         if (customName == "") {
             boardName = llKey2Name(current) + " Tip Board";
@@ -657,20 +655,21 @@ initPrim() {
     owner = llGetOwner();
 
     // Get and set the original parcel stream URL
-    MUSIC_URL_LSD_KEY = MUSIC_URL_PREFIX + (string)owner;
-    musicURL = llLinksetDataRead(MUSIC_URL_LSD_KEY);
-    if (musicURL == "") {
+    STREAM_URL_LSD_KEY = STREAM_URL_PREFIX + (string)owner;
+    streamURL = llLinksetDataRead(STREAM_URL_LSD_KEY);
+    if (streamURL == "") {
         // No parcel stream URL is stored
         if (currURL == "") {
             // No parcel stream URL is set or we can't get it
-            llSetParcelMusicURL(DEF_MUSIC_URL);
-            musicURL = DEF_MUSIC_URL;
+            llSetParcelMusicURL(DEF_STREAM_URL);
+            streamURL = DEF_STREAM_URL;
+            chkMusicURL(streamURL);
         } else {
-            musicURL = currURL;
+            streamURL = currURL;
         }
-        linksetDataWrite(MUSIC_URL_LSD_KEY, musicURL, "Parcel Music URL");
+        linksetDataWrite(STREAM_URL_LSD_KEY, streamURL, "Parcel Stream URL");
     }
-    llMessageLinked(LINK_THIS, SND_LM_MUSIC, musicURL, owner);
+    llMessageLinked(LINK_THIS, SND_LM_STREAM, streamURL, owner);
 
     // Set default texture and glow of beveled sides and back
     if (llGetInventoryType(sideTexture) == INVENTORY_TEXTURE) {
@@ -721,12 +720,12 @@ list csv2list(string csv) {
 
 processAction(integer action, string name, string value) {
     if (action == LINKSETDATA_RESET) {
-        llOwnerSay("Link set datastore has been cleared.");
+        if (debug) llOwnerSay("Link set datastore has been cleared.");
         llResetScript();
     } else if (action == LINKSETDATA_DELETE) {
-        llOwnerSay("Link set datastore key \"" + name + "\" has been deleted.");
+        if (debug) llOwnerSay("Link set datastore key \"" + name + "\" has been deleted.");
     } else if (action == LINKSETDATA_UPDATE) {
-        llOwnerSay("Link set datastore key \"" + name + "\" = \"" + value + "\".");
+        if (debug) llOwnerSay("Link set datastore key \"" + name + "\" = \"" + value + "\".");
     }
 }
 
@@ -745,9 +744,10 @@ string lnk_msg(integer sender, integer num, string message, key id) {
     integer RCV_LM_HOVER       = 70;
     integer RCV_LM_LOGIN       = 75;
     integer RCV_LM_PROFILE     = 80;
-    integer RCV_LM_MUSIC       = 88;
+    integer RCV_LM_STREAM      = 88;
     integer RCV_LM_SHARE       = 90;
     integer RCV_LM_READ_AMTS   = 95;
+    integer RCV_LM_DEBUG       = 99;
 
     // Message to send to other boards
     string msg = message;
@@ -792,8 +792,8 @@ string lnk_msg(integer sender, integer num, string message, key id) {
         updateHoverText();
     } else if (num == RCV_LM_PROFILE) {
         getProfilePic(current);
-    } else if (num == RCV_LM_MUSIC) {
-        setMusicURL(message, id);
+    } else if (num == RCV_LM_STREAM) {
+        setStreamURL(message, id);
         // Do not send a message to other boards
         msg = "";
     } else if (num == RCV_LM_SHARE) {
@@ -824,6 +824,8 @@ string lnk_msg(integer sender, integer num, string message, key id) {
     } else if (num == RCV_LM_TOTAL) {
         showTotal = !showTotal;
         updateHoverText();
+    } else if (num == RCV_LM_DEBUG) {
+        debug = !debug;
     }
 
     if (ALL) {
@@ -835,19 +837,29 @@ string lnk_msg(integer sender, integer num, string message, key id) {
     return ret_state;
 }
 
-setMusicURL(string url, key id) {
-    MUSIC_URL_LSD_KEY = MUSIC_URL_PREFIX + (string)id;
-    musicURL = llLinksetDataRead(MUSIC_URL_LSD_KEY);
-    if (musicURL != url) {
+chkMusicURL(string url) {
+    // Check if the update actually took place
+    if (llGetParcelMusicURL() == url) {
+        if (debug) llOwnerSay("Music URL successfully updated!");
+    } else {
+        if (debug) llOwnerSay("Failure: Could not set music URL. Check land ownership or group deeding permissions.");
+    }
+}
+
+setStreamURL(string url, key id) {
+    STREAM_URL_LSD_KEY = STREAM_URL_PREFIX + (string)id;
+    streamURL = llLinksetDataRead(STREAM_URL_LSD_KEY);
+    if (streamURL != url) {
         if (url != "") {
-            linksetDataWrite(MUSIC_URL_LSD_KEY, url, "Parcel Music URL");
-            musicURL = url;
+            linksetDataWrite(STREAM_URL_LSD_KEY, url, "Parcel Stream URL");
+            streamURL = url;
         }
     }
-    if (musicURL != "") {
-        llMessageLinked(LINK_THIS, SND_LM_MUSIC, musicURL, id);
-        if (llGetParcelMusicURL() != musicURL) {
-            llSetParcelMusicURL(musicURL);
+    if (streamURL != "") {
+        llMessageLinked(LINK_THIS, SND_LM_STREAM, streamURL, id);
+        if (llGetParcelMusicURL() != streamURL) {
+            llSetParcelMusicURL(streamURL);
+            chkMusicURL(streamURL);
         }
     }
 }
@@ -891,13 +903,13 @@ default {
         // If Debit permissions are granted, set up the pay price for this single-price vendor
         if (perms & PERMISSION_DEBIT) {
             llOwnerSay("Donation Board is ready and online.");
-            readyForDonations(owner);
-            state donate;
         } else {
-            llOwnerSay("⚠️ This script needs debit permissions to send money.");
-            stopDonation();
-            llMessageLinked(LINK_THIS, SND_LM_MENU, "", owner);
+            tipSplit = 0;
+            twoSplit = 0;
+            llOwnerSay("WARNING: This script needs debit permissions to share donations.");
         }
+        readyForDonations(owner);
+        state donate;
     }
 
     touch_start(integer num_detected) {

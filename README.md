@@ -42,6 +42,16 @@ There are no notecards to edit, all configuration is maintained in the prim's li
 
 It is necessary to give the board permission to take money in order to support the sharing feature. You MUST allow it for the board to work if you want to share donations. The permission popup will be displayed when the board is rezzed and any time it is reset. Accept the permission request, this is a standard part of any object that takes payments.
 
+### Deeding the Board on Group Owned Land
+
+The Truth &amp; Beauty Donation Board can set the parcel music stream URL. In order to do so, the board must be owned by the same owner as the land. If the parcel has been deeded to a group then the Donation Board must also be deeded to the same group.
+
+To configure the board's group, the owner can right-click the board and select Edit. In the General tab of the Edit window, click the wrench icon to the right of the Group: setting. Select the group to use in the Group chooser popup.
+
+Once the desired group is set, click the Share tick box below the group in the Edit window. Click the Deed button and Close the Edit window.
+
+**[Note:]** It is recommended to take a copy of the Donation Board back into your inventory **Before Deeding** it to a group. This makes it easier to modify the board later if needed and ensures you will always have a copy to re-deed if necessary.
+
 ## Dialog Menu
 
 By default the board will be configured to accept a donation (Pay) when clicked. The owner or members of the board's group can access a setup menu by touching the board. To touch the board when Pay is set for click, it is necessary to right click the board and select Touch. Right clicking and selecting Touch will open a dialog menu with buttons to further customize the Donation Board.
@@ -81,12 +91,14 @@ The main menu includes the following buttons:
     - Open the Board texture menu
 - **TOTAL**
     - Toggle display of total donations in hover text
+- **DEBUG**
+    - The owner can enable debug mode to receive additional messages
 - **EXIT**
     - Exit the Dialog Menu
 
 ## Splitting Donations
 
-The Truth & Beauty Donation Board can be configured to split donations between the owner and a logged in user.
+The Truth & Beauty Donation Board is configured to split donations between the owner and a logged in user.
 
 In order for the donation splitting feature to work, the request for Debit permission must have been accepted.
 
@@ -94,9 +106,7 @@ Members of the board's group can login by touching the board.
 
 Only the owner can manage the tip sharing features such as specifying the share percentage, configuring the board's group, and enabling/disabling sharing via the dialog menus.
 
-To configure the board's group, the owner can right-click the board and select Edit. In the General tab of the Edit window, click the wrench icon to the right of the Group: setting. Select the group to use in the Group chooser popup. Close the Edit window.
-
-Once the board group is configured, enable the group sharing feature of the board by right-clicking the board and selecting Touch. In the main dialog menu, click GROUP. Members of the configured group can now login by touching the board and donations will be split between the owner and logged in user.
+Once the board group is configured and on group owned land the board has been deeded to the group, enable the group sharing feature of the board by right-clicking the board and selecting Touch. In the main dialog menu, click GROUP. Members of the configured group can now login by touching the board and donations will be split between the owner and logged in user.
 
 ### Configure the share percentage
 

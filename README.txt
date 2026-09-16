@@ -4,7 +4,7 @@ See https://github.com/missyrestless/DonationBoard#readme for the latest updated
 
 Rez a Truth & Beauty Donation Board and position it where you want. It automatically configures as a donation board for the parcel in which it is rezzed. Set the donation board group and members of that group can login, the board automatically converting to a shared tip system.
 
-Unlike other advanced tip jar and donation board systems, the Truth &amp; Beauty Donation Board does not rely on an external 3rd party web service or website. All functionality is implemented in the board's scripts and will continue to function without dependence on anyone else or any service maintained by others.
+Unlike other advanced tip jar and donation board systems, the Truth & Beauty Donation Board does not rely on an external 3rd party web service or website. All functionality is implemented in the board's scripts and will continue to function without dependence on anyone else or any service maintained by others.
 
 Features
 =========
@@ -38,6 +38,17 @@ There are no notecards to edit, all configuration is maintained in the prim's li
 
 It is necessary to give the board permission to take money in order to support the sharing feature. You MUST allow it for the board to work if you want to share donations. The permission popup will be displayed when the board is rezzed and any time it is reset. Accept the permission request.
 
+Deeding the Board on Group Owned Land
+======================================
+
+The Truth & Beauty Donation Board can set the parcel music stream URL. In order to do so, the board must be owned by the same owner as the land. If the parcel has been deeded to a group then the Donation Board must also be deeded to the same group.
+
+To configure the board's group, the owner can right-click the board and select Edit. In the General tab of the Edit window, click the wrench icon to the right of the Group: setting. Select the group to use in the Group chooser popup.
+
+Once the desired group is set, click the Share tick box below the group in the Edit window. Click the Deed button and Close the Edit window.
+
+Note: It is recommended to take a copy of the Donation Board back into your inventory Before Deeding it to a group. This makes it easier to modify the board later if needed and ensures you will always have a copy to re-deed if necessary.
+
 Dialog Menu
 ============
 
@@ -45,40 +56,42 @@ By default the board will be configured to accept a donation (Pay) when clicked.
 
 The main menu includes the following buttons:
 
-- **START**
+- START
     - Activate an idle Donation Board
     - When the board is in the active state a click will open a payment dialog
-- **INFO**
+- INFO
     - Report the status and location of all Donation Boards in the region
-- **STOP**
+- STOP
     - Deactivate the Donation Board and enter the idle state
     - When the board is in an idle state a click will open the dialog menu
-- **SOLO**
+- SOLO
     - Menu actions effect ONLY THIS BOARD
-- **ALL**
+- ALL
     - Menu actions effect ALL BOARDS IN REGION
-- **OWNER**
+- OWNER
     - Owner only access
-- **GROUP**
+- GROUP
     - Allow group members to login/manage the boards
-- **LOGIN**
+- LOGIN
     - Login to the board as a DJ or event coordinator
-- **LOGOUT**
+- LOGOUT
     - Exit role as DJ or event coordinator, board reverts to accepting parcel donations
     - Leaving the area will automatically logout any logged in user
-- **AMOUNTS**
+- AMOUNTS
     - Set the suggested amounts in the Pay popup, including the default pay amount
-- **CLEAR**
+- CLEAR
     - Clear all stored configuration and reset to original state
-- **HOVER TXT**
+- HOVER TXT
     - Set the Board name hover text
-- **SHARE**
+- SHARE
     - Set the percentage of donation shared with logged in group member
-- **TEXTURE**
+- TEXTURE
     - Open the Board texture menu
-- **TOTAL**
+- TOTAL
     - Toggle display of total donations in hover text
-- **EXIT**
+- DEBUG
+    - The owner can enable debug mode to receive additional messages
+- EXIT
     - Exit the Dialog Menu
 
 Splitting Donations
