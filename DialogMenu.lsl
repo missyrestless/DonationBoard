@@ -94,6 +94,7 @@ integer SND_LM_FRONT_TEXT  = 48;
 integer SND_LM_GROUP       = 50;
 integer SND_LM_TOTAL       = 55;
 integer SND_LM_OBJMSG      = 60;
+integer SND_LM_DISTANCE    = 65;
 integer SND_LM_HOVER       = 70;
 integer SND_LM_LOGIN       = 75;
 integer SND_LM_PROFILE     = 80;
@@ -103,11 +104,12 @@ integer SND_LM_READ_AMTS   = 95;
 integer SND_LM_DEBUG       = 99;
 //
 // Dialog Menu & listener for Webhook URL management
-float   LISTEN_TTL      = 60.0;                
 integer inputListen     = -1;
 integer shareListen     = -1;
 integer musicListen     = -1;
 integer debug           = FALSE;
+float   LISTEN_TTL      = 60.0;                
+float   maxDistance     = 15.0;
 
 // Keys
 key owner       = NULL_KEY;
@@ -263,9 +265,9 @@ displayMainMenu() {
         main_menu += ["LOGIN"];
     }
     if (toucher == owner) {
-        main_menu += ["AMOUNTS", "HOVER TXT", "STREAM", "TEXTURE", "TOTAL", "EXIT", "CLEAR", "DEBUG", "SHARE", "EXIT"];
+        main_menu += ["AMOUNTS", "HOVER TXT", "STREAM", "TEXTURE", "TOTAL", "EXIT", "CLEAR", "DEBUG", "DISTANCE", "SHARE", "EXIT"];
     } else {
-        main_menu += ["AMOUNTS", "HOVER TXT", "STREAM", "TEXTURE", "TOTAL", "EXIT"];
+        main_menu += ["AMOUNTS", "DISTANCE", "HOVER TXT", "STREAM", "TEXTURE", "TOTAL", "EXIT"];
     }
     showMenu(menuMessage, main_menu);
 }
@@ -344,6 +346,19 @@ displayAmtsMenu() {
     showMenu(menuMessage, amts_menu);
 }
 
+displayDistMenu() {
+    llListenRemove(dialogHandle);
+    dialogHandle = llListen(dialogChannel, "", toucher, "");
+    list dist_menu = [];
+
+    menuMessage = "\nTruth & Beauty Donation Board " + boardVersion;
+    menuMessage += "\n\nLogged in users over Max Distance from the board are logged out\n";
+    menuMessage += "\nCurrent Max Distance: " + (string)maxDistance + "M";
+    menuMessage += "\nSet the Max Distance on THIS BOARD ONLY\n";
+    dist_menu = ["5M", "7.5M", "10M", "12.5M", "15M", "17.5M", "20M", "22.5M", "25M", "30M", "BACK", "EXIT"];
+    showMenu(menuMessage, dist_menu);
+}
+
 // Writes the provided key/value pair to the prim's linkset datastore
 integer linksetDataWrite(string lsdKey, string value, string cfg) {
     string val = llStringTrim(value, STRING_TRIM);
@@ -374,6 +389,7 @@ setOwner() {
 string lnk_msg(integer sender, integer num, string message, key id) {
     // Receive from Donation Board
     integer RCV_LM_MENU        = 100;
+    integer RCV_LM_DISTANCE    = 125;
     integer RCV_LM_GROUP       = 150;
     integer RCV_LM_LOGIN       = 175;
     integer RCV_LM_STATUS_ON   = 200;
@@ -386,6 +402,8 @@ string lnk_msg(integer sender, integer num, string message, key id) {
     if (num == RCV_LM_MENU) {
         toucher = id;
         ret_state = "menu";
+    } else if (num == RCV_LM_DISTANCE) {
+        maxDistance = (float)message;
     } else if (num == RCV_LM_GROUP) {
         if (message == "Group") {
             GROUP = TRUE;
@@ -565,6 +583,8 @@ state menu {
             } else if (message == "DEBUG") {
                 debug = !debug;
                 llMessageLinked(LINK_THIS, SND_LM_DEBUG, (string)debug, "");
+            } else if (message == "DISTANCE") {
+                displayDistMenu();
             } else if ((message == "LOGIN")|| (message == "LOGOUT")) {
                 llMessageLinked(LINK_THIS, SND_LM_LOGIN, (string)loggedIn, id);
                 loggedIn = !loggedIn;
@@ -598,6 +618,9 @@ state menu {
                 state text;
             } else if (message == "TOTAL") {
                 llMessageLinked(LINK_THIS, SND_LM_TOTAL, "", "");
+            } else if ((message == "5M") || (message == "7.5M") || (message == "10M") || (message == "12.5M") || (message == "15M") || (message == "17.5M") || (message == "20M") || (message == "22.5M") || (message == "25M") || (message == "30M")) {
+                maxDistance = (float)llGetSubString(message, 0, -2);
+                llMessageLinked(LINK_THIS, SND_LM_DISTANCE, (string)maxDistance, "");
             } else if (message == "<<< Prev") {
                 pageNumber--;
             } else if (message == "Next >>>") {

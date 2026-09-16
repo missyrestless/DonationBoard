@@ -50,7 +50,7 @@ integer  deflt_pay      = 250; // Default donation amount
 list     quick_pay      = [100, 250, 500, 1000]; // quick pay buttons
 list     deftextures;
 
-float    checkInterval  = 30.0;
+float    checkInterval  = 60.0;
 float    maxDistance    = 15.0;
 
 key      current;
@@ -103,6 +103,7 @@ string  STREAM_URL_PREFIX  = "url_";
 //
 // Send to dialog menu
 integer SND_LM_MENU        = 100;
+integer SND_LM_DISTANCE    = 125;
 integer SND_LM_GROUP       = 150;
 integer SND_LM_LOGIN       = 175;
 integer SND_LM_STATUS_ON   = 200;
@@ -755,6 +756,7 @@ string lnk_msg(integer sender, integer num, string message, key id) {
     integer RCV_LM_GROUP       = 50;
     integer RCV_LM_TOTAL       = 55;
     integer RCV_LM_OBJMSG      = 60;
+    integer RCV_LM_DISTANCE    = 65;
     integer RCV_LM_HOVER       = 70;
     integer RCV_LM_LOGIN       = 75;
     integer RCV_LM_PROFILE     = 80;
@@ -798,6 +800,8 @@ string lnk_msg(integer sender, integer num, string message, key id) {
     } else if (num == RCV_LM_LOGIN) {
         toucher = id;
         setLoggedIn();
+    } else if (num == RCV_LM_DISTANCE) {
+        maxDistance = (float)message;
     } else if (num == RCV_LM_HOVER) {
         boardName = message;
         customName = boardName;
@@ -899,6 +903,8 @@ default {
 
         // Remove any previous hover text
         llSetText("", < 1.0, 1.0, 1.0>, 1.0);
+        // Send max distance
+        llMessageLinked(LINK_THIS, SND_LM_DISTANCE, (string)maxDistance, "");
 
         // Compute a large negative channel number based on the object owner
         // All boards owned by the same owner will use the same channel

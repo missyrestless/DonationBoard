@@ -83,6 +83,7 @@ The main menu includes the following buttons:
 - LOGOUT
 - AMOUNTS
 - CLEAR
+- DISTANCE
 - HOVER TXT
 - SHARE
 - TEXTURE

@@ -112,6 +112,8 @@ The main menu includes the following buttons:
     - Set the suggested amounts in the Pay popup, including the default pay amount
 - **CLEAR**
     - Clear all stored configuration and reset to original state
+- **DISTANCE**
+    - Set the maximum distance a logged in user can be before being logged out
 - **HOVER TXT**
     - Set the Board name hover text
 - **SHARE**
