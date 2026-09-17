@@ -220,7 +220,7 @@ displayMainMenu() {
             boardVersion = defaultVersion;
         }
     }
-    menuMessage = "\nTruth & Beauty Donation Board " + boardVersion;
+    menuMessage = "\nVERSION = " + boardVersion;
     if (ALL) {
         menuMessage += "\nMenu actions effect ALL BOARDS IN REGION\n";
         menuMessage += "\nSOLO = Menu actions effect only this board";
@@ -234,14 +234,11 @@ displayMainMenu() {
         menuMessage += "\nGROUP = Allow group members to manage";
     }
     menuMessage += "\nAMOUNTS = pay dialog suggested amounts";
-    menuMessage += "\nHOVER TXT = Set the Board hover text";
     if (toucher == owner) {
         menuMessage += "\nCLEAR = Reset and clear the datastore";
         menuMessage += "\nSHARE = Set the Board donation share percent";
     }
     menuMessage += "\nSTREAM = Set the parcel music stream URL";
-    menuMessage += "\nTEXTURE = Open the Board texture menu";
-    menuMessage += "\nTOTAL = Toggle display of total donations";
     if (boardStatus) {
         main_menu = ["STOP", "INFO"];
         menuMessage += "\n\nThis Board is active and accepting donations";
@@ -265,9 +262,9 @@ displayMainMenu() {
         main_menu += ["LOGIN"];
     }
     if (toucher == owner) {
-        main_menu += ["AMOUNTS", "HOVER TXT", "STREAM", "TEXTURE", "TOTAL", "EXIT", "CLEAR", "DEBUG", "DISTANCE", "SHARE", "EXIT"];
+        main_menu += ["AMOUNTS", "STREAM", "CLEAR", "DEBUG", "SHARE", "SETTINGS", "EXIT"];
     } else {
-        main_menu += ["AMOUNTS", "DISTANCE", "HOVER TXT", "STREAM", "TEXTURE", "TOTAL", "EXIT"];
+        main_menu += ["AMOUNTS", "STREAM", "SETTINGS", "EXIT"];
     }
     showMenu(menuMessage, main_menu);
 }
@@ -279,7 +276,7 @@ displayTextMenu() {
     llListenRemove(dialogHandle);
     dialogHandle = llListen(dialogChannel, "", toucher, "");
 
-    menuMessage = "\nTruth & Beauty Donation Board Texture Menu";
+    menuMessage = "\nVERSION = " + boardVersion;
 
     // Populate the inventory textures menu entries
     if (ALL) {
@@ -315,7 +312,7 @@ displayAmtsMenu() {
     dialogHandle = llListen(dialogChannel, "", toucher, "");
     list amts_menu = [];
 
-    menuMessage = "\nTruth & Beauty Donation Board " + boardVersion;
+    menuMessage = "\nVERSION = " + boardVersion;
     menuMessage += "\nCurrent Pay Buttons: " + llDumpList2String(quick_pay, ", ");
     menuMessage += "\nCurrent Default Amount: " + (string)deflt_pay;
     menuMessage += "\nSet Donation Amounts on THIS BOARD ONLY\n";
@@ -351,12 +348,29 @@ displayDistMenu() {
     dialogHandle = llListen(dialogChannel, "", toucher, "");
     list dist_menu = [];
 
-    menuMessage = "\nTruth & Beauty Donation Board " + boardVersion;
+    menuMessage = "\nVERSION = " + boardVersion;
     menuMessage += "\n\nLogged in users over Max Distance from the board are logged out\n";
     menuMessage += "\nCurrent Max Distance: " + (string)maxDistance + "M";
     menuMessage += "\nSet the Max Distance on THIS BOARD ONLY\n";
     dist_menu = ["5M", "7.5M", "10M", "12.5M", "15M", "17.5M", "20M", "22.5M", "25M", "30M", "BACK", "EXIT"];
     showMenu(menuMessage, dist_menu);
+}
+
+displayOptsMenu() {
+    llListenRemove(dialogHandle);
+    dialogHandle = llListen(dialogChannel, "", toucher, "");
+    list opts_menu = [];
+
+    menuMessage = "\nVERSION = " + boardVersion;
+    menuMessage += "\nCurrent Hover Text: " + boardName;
+    menuMessage += "\nCurrent Max Distance: " + (string)maxDistance + "M\n";
+    menuMessage += "\nHOVER TXT = Set the Board hover text";
+    menuMessage += "\nTEXTURE = Open the Board texture menu";
+    menuMessage += "\nTOTAL = Toggle display of total donations";
+    menuMessage += "\nDISTANCE = Set max distance away before logout\n";
+    menuMessage += "\nSelect a setting to configure\n";
+    opts_menu = ["HOVER TXT", "TEXTURE", "TOTAL", "DISTANCE", "MAIN MENU", "EXIT"];
+    showMenu(menuMessage, opts_menu);
 }
 
 // Writes the provided key/value pair to the prim's linkset datastore
@@ -391,6 +405,7 @@ string lnk_msg(integer sender, integer num, string message, key id) {
     integer RCV_LM_MENU        = 100;
     integer RCV_LM_DISTANCE    = 125;
     integer RCV_LM_GROUP       = 150;
+    integer RCV_LM_HOVER       = 160;
     integer RCV_LM_LOGIN       = 175;
     integer RCV_LM_STATUS_ON   = 200;
     integer RCV_LM_STATUS_OFF  = 210;
@@ -410,6 +425,8 @@ string lnk_msg(integer sender, integer num, string message, key id) {
         } else if (message == "Owner") {
             GROUP = FALSE;
         }
+    } else if (num == RCV_LM_HOVER) {
+        boardName = message;
     } else if (num == RCV_LM_LOGIN) {
         if ((integer)message) {
             loggedIn = TRUE;
@@ -585,6 +602,7 @@ state menu {
                 llMessageLinked(LINK_THIS, SND_LM_DEBUG, (string)debug, "");
             } else if (message == "DISTANCE") {
                 displayDistMenu();
+                return;
             } else if ((message == "LOGIN")|| (message == "LOGOUT")) {
                 llMessageLinked(LINK_THIS, SND_LM_LOGIN, (string)loggedIn, id);
                 loggedIn = !loggedIn;
@@ -605,6 +623,12 @@ state menu {
                 llSetTimerEvent(LISTEN_TTL);
                 llTextBox(id, "\nEnter the Donation Board hover text into the box", inputChannel);
                 return; // Exit the listen event
+            } else if (message == "MAIN MENU") {
+                displayMainMenu();
+                return;
+            } else if (message == "SETTINGS") {
+                displayOptsMenu();
+                return;
             } else if (message == "STREAM") {
                 getStreamURL(id);
                 return; // Exit the listen event

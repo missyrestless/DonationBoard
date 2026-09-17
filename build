@@ -16,8 +16,8 @@ make
   rm -rf ${DEST}
   mkdir -p ${DEST}
 
-  cp DonationBoard.lslo ${DEST}/DonationBoard
-  cp DialogMenu.lslo ${DEST}/DialogMenu
+  cp DonationBoard.lslo ${DEST}/DonationBoard.lsl
+  cp DialogMenu.lslo ${DEST}/DialogMenu.lsl
   cp COPYRIGHT LICENSE ${DEST}
   cp README.txt ${DEST}/README
 }

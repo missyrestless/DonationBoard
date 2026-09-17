@@ -29,6 +29,7 @@ string   VERSION = "1.0.5";
 
 integer  ALL     = TRUE;      // Set to TRUE to effect all boards, FALSE for single board
 integer  GROUP   = FALSE;     // Set to TRUE to allow group members to manage, FALSE for owner only
+integer  DEEDED  = FALSE;     // TRUE if the Donation Board has been deeded to a group
 integer  listenerID;
 integer  objListenID;
 integer  objChannel;           // Channel for communication between screens, based on owner
@@ -63,7 +64,7 @@ string   VERT_SPACE     = "\n \n \n \n \n \n ";
 string   sideTexture    = "Sides";
 string   customName     = "";
 string   streamURL      = "";
-string   boardName;
+string   boardName      = "";
 string   front_texture;
 string   orig_texture;
 string   linksetValue;
@@ -105,6 +106,7 @@ string  STREAM_URL_PREFIX  = "url_";
 integer SND_LM_MENU        = 100;
 integer SND_LM_DISTANCE    = 125;
 integer SND_LM_GROUP       = 150;
+integer SND_LM_HOVER       = 160;
 integer SND_LM_LOGIN       = 175;
 integer SND_LM_STATUS_ON   = 200;
 integer SND_LM_STATUS_OFF  = 210;
@@ -112,7 +114,6 @@ integer SND_LM_SHARE       = 250;
 integer SND_LM_STREAM      = 300;
 
 updateHoverText() {
-    // string text = boardName + " Donation Board\n";
     string text = boardName + "\n";
     string offTexture = "Maintenance";
     vector color;
@@ -285,6 +286,7 @@ acceptDonation(key id, integer amount) {
     }
 
     if (ownerShare > 0) {
+        if (DEEDED) llGiveMoney(owner, ownerShare);
         llInstantMessage(owner, "You retained L$" + (string)ownerShare + " from a donation.");
     }
 
@@ -308,15 +310,15 @@ readyForDonations(key recKey) {
     } else {
         boardName = customName;
     }
+    llMessageLinked(LINK_THIS, SND_LM_HOVER, boardName, "");
     if (current == owner) {
-        loggedIn = FALSE;
         tipSplit = 0;
     } else {
-        loggedIn = TRUE;
         tipSplit = twoSplit;
-        llInstantMessage(current, "You are now logged in.");
-        llSetTimerEvent(checkInterval);
     }
+    loggedIn = TRUE;
+    llInstantMessage(current, "You are now logged in.");
+    llSetTimerEvent(checkInterval);
     setStreamURL("", current);
     llMessageLinked(LINK_THIS, SND_LM_LOGIN, (string)loggedIn, current);
     getProfilePic(current);
@@ -334,6 +336,7 @@ getDatastoreValues() {
     } else {
         boardName = llKey2Name(owner) + " Tip Board";
     }
+    llMessageLinked(LINK_THIS, SND_LM_HOVER, boardName, "");
     // Total amount received linkset data key
     linksetValue = llLinksetDataRead(TOTAL_AMT_LSD_KEY);
     if (linksetValue != "") {
@@ -392,12 +395,7 @@ getDatastoreValues() {
         }
     }
     // Make sure the Donation Board version is written
-    linksetValue = llLinksetDataRead(VERSION_LSD_KEY);
-    if (linksetValue != "") {
-        VERSION = linksetValue;
-    } else {
-        linksetDataWrite(VERSION_LSD_KEY, VERSION, "Donation Board Version");
-    }
+    linksetDataWrite(VERSION_LSD_KEY, VERSION, "Donation Board Version");
 }
 
 setDatastoreValues() {
@@ -507,6 +505,7 @@ checkGone(key avatar) {
         } else {
             boardName = customName;
         }
+        llMessageLinked(LINK_THIS, SND_LM_HOVER, boardName, "");
         llMessageLinked(LINK_THIS, SND_LM_SHARE, llList2Json(JSON_OBJECT, ["split", (string)tipSplit, "share", (string)twoSplit]), "");
         getProfilePic(current);
         llSetTimerEvent(0.0);
@@ -520,7 +519,11 @@ setLoggedIn() {
         loggedIn = TRUE;
         setStreamURL("", current);
         llMessageLinked(LINK_THIS, SND_LM_LOGIN, (string)loggedIn, current);
-        tipSplit = twoSplit;
+        if (current == owner) {
+            tipSplit = 0;
+        } else {
+            tipSplit = twoSplit;
+        }
         getProfilePic(current);
 
         llSetText("🎧  " + boardName + " 🎧\nTips Welcome!" + VERT_SPACE, <0.5,1.0,0.5>, 1.0);
@@ -538,6 +541,7 @@ setLoggedIn() {
         } else {
             boardName = customName;
         }
+        llMessageLinked(LINK_THIS, SND_LM_HOVER, boardName, "");
         getProfilePic(current);
         startDonation();
         llInstantMessage(toucher, "You have logged out.");
@@ -651,12 +655,29 @@ sparkle() {
 }
 
 setOwner() {
+    vector pos      = llGetPos();
+    list   details  = llGetParcelDetails(pos, [PARCEL_DETAILS_OWNER, PARCEL_DETAILS_GROUP]);
+    key    ownerKey = llList2Key(details, 0);
+    key    groupKey = llList2Key(details, 1);
+
     linksetValue = llLinksetDataRead(OWNER_LSD_KEY);
     if (linksetValue == "") {
         owner = llGetOwner();
         linksetDataWrite(OWNER_LSD_KEY, (string)owner, "Donation Board Owner");
     } else {
         owner = (key)linksetValue;
+    }
+    if (owner == llGetOwner()) {
+        DEEDED = FALSE;
+    } else {
+        DEEDED = TRUE;
+    }
+
+    // If the parcel is group-owned, the owner key and group key are identical
+    if ((ownerKey == groupKey) && (groupKey != NULL_KEY)) {
+        if (!DEEDED) llOwnerSay("WARNING: parcel is deeded to a group. Group Key: " + (string)groupKey);
+    } else {
+        if (DEEDED) llOwnerSay("WARNING: parcel is privately owned and not deeded to a group.");
     }
 }
 
@@ -700,19 +721,18 @@ initPrim() {
     stopDonation();
 
     llOwnerSay("The Truth & Beauty Donation Board located at " + slurl + " is now active.");
-    llOwnerSay("Activate the 'Start Donations', 'Stop Donations', and 'Donations Info' gestures in your inventory");
-    llOwnerSay("Once activated, saying '/paystart' in public chat will enable all donation boards you own in this region");
-    llOwnerSay("Saying '/paystop' will disable the donation boards");
-    llOwnerSay("Saying '/payinfo' will report their status, version, and locations");
     llOwnerSay("Donation Board updates are free for life and will be available at:");
     llOwnerSay("    https://github.com/missyrestless/DonationBoard/releases");
     llOwnerSay("The latest Truth & Beauty Donation Board documentation can be found at:");
     llOwnerSay("    https://github.com/missyrestless/DonationBoard#readme");
 
+    // Write the version to the linkset datastore
+    linksetDataWrite(VERSION_LSD_KEY, VERSION, "Donation Board Version");
     // Retrieve any stored configuration parameters from linkset datastore
     // If not stored then use defaults
     getDatastoreValues();
     boardName = parcel + " Donation Board";
+    llMessageLinked(LINK_THIS, SND_LM_HOVER, boardName, "");
     customName = boardName;
     setDatastoreValues();
     needInit = FALSE;
