@@ -28,7 +28,7 @@
 string   VERSION = "1.0.5";
 
 integer  ALL     = TRUE;      // Set to TRUE to effect all boards, FALSE for single board
-integer  GROUP   = FALSE;     // Set to TRUE to allow group members to manage, FALSE for owner only
+integer  GROUP   = TRUE;      // Set to TRUE to allow group members to manage, FALSE for owner only
 integer  DEEDED  = FALSE;     // TRUE if the Donation Board has been deeded to a group
 integer  listenerID;
 integer  objListenID;
