@@ -18,6 +18,7 @@ make
 
   cp DonationBoard.lslo ${DEST}/DonationBoard.lsl
   cp DialogMenu.lslo ${DEST}/DialogMenu.lsl
+  cp StreamRelay.lslo ${DEST}/StreamRelay.lsl
   cp COPYRIGHT LICENSE ${DEST}
   cp README.txt ${DEST}/README
 }

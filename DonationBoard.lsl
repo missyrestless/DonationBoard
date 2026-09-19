@@ -4,6 +4,7 @@
 // Message or Touch by owner of object toggles Menu and Payment states           //
 // Listens on channel 0 for trigger messages to board                            //
 // Messages other boards in region with same owner to trigger toggle command     //
+// Sends the parcel stream URL to the Stream Relay object on group owned land    //
 ///////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////
@@ -22,6 +23,8 @@
 // 2026-Sep-15 Auto set parcel stream URL         //
 // 2026-Sep-16 Set owner key before group deed    //
 //             Set owner key in linkset datastore //
+// 2026-Sep-18 Send stream URL to Stream Relay on //
+//             parcel deeded to group             //
 //                                                //
 ////////////////////////////////////////////////////
 
@@ -29,10 +32,12 @@ string   VERSION = "1.0.5";
 
 integer  ALL     = TRUE;      // Set to TRUE to effect all boards, FALSE for single board
 integer  GROUP   = TRUE;      // Set to TRUE to allow group members to manage, FALSE for owner only
-integer  DEEDED  = FALSE;     // TRUE if the Donation Board has been deeded to a group
+integer  DEEDED  = FALSE;     // TRUE if the parcel has been deeded to a group
 integer  listenerID;
 integer  objListenID;
 integer  objChannel;           // Channel for communication between screens, based on owner
+// integer  relayListenID;
+integer  relayChannel;         // Channel for communication with the Stream Relay, based on parcel ID
 integer  listenChannel  = 0;   // Channel for chat and gestures
  
 integer  loggedIn       = FALSE;
@@ -286,7 +291,7 @@ acceptDonation(key id, integer amount) {
     }
 
     if (ownerShare > 0) {
-        if (DEEDED) llGiveMoney(owner, ownerShare);
+        llGiveMoney(owner, ownerShare);
         llInstantMessage(owner, "You retained L$" + (string)ownerShare + " from a donation.");
     }
 
@@ -697,7 +702,7 @@ initPrim() {
         // No parcel stream URL is stored
         if (currURL == "") {
             // No parcel stream URL is set or we can't get it
-            llSetParcelMusicURL(DEF_STREAM_URL);
+            setParcelMusicURL(DEF_STREAM_URL);
             streamURL = DEF_STREAM_URL;
             chkMusicURL(streamURL);
         } else {
@@ -884,6 +889,14 @@ chkMusicURL(string url) {
     }
 }
 
+setParcelMusicURL(string URL) {
+    if (DEEDED) {
+        llRegionSay(relayChannel, URL);
+    } else {
+        llSetParcelMusicURL(URL);
+    }
+}
+
 setStreamURL(string url, key id) {
     STREAM_URL_LSD_KEY = STREAM_URL_PREFIX + (string)id;
     streamURL = llLinksetDataRead(STREAM_URL_LSD_KEY);
@@ -896,7 +909,7 @@ setStreamURL(string url, key id) {
     if (streamURL != "") {
         llMessageLinked(LINK_THIS, SND_LM_STREAM, streamURL, id);
         if (llGetParcelMusicURL() != streamURL) {
-            llSetParcelMusicURL(streamURL);
+            setParcelMusicURL(streamURL);
             chkMusicURL(streamURL);
         }
     }
@@ -925,6 +938,18 @@ default {
         llSetText("", < 1.0, 1.0, 1.0>, 1.0);
         // Send max distance
         llMessageLinked(LINK_THIS, SND_LM_DISTANCE, (string)maxDistance, "");
+
+         // Get the parcel details at the object's current position
+        list details = llGetParcelDetails(llGetPos(), [PARCEL_DETAILS_ID]);
+        // Extract the parcel key (ID) from the list
+        key parcelID = llList2Key(details, 0);
+
+        // Compute a large negative channel number based on the parcel ID
+        // Use this channel to send the stream URL to the Stream Relay object
+        relayChannel = 0x80000000 | (integer) ( "0x" + (string) parcelID );
+        // No need to listen on the relay channel as messages are only outgoing
+        // llListenRemove(relayListenID);
+        // relayListenID = llListen(relayChannel, "", NULL_KEY, "");
 
         // Compute a large negative channel number based on the object owner
         // All boards owned by the same owner will use the same channel
