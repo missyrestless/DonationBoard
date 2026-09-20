@@ -87,7 +87,7 @@ If unable to deed the relay, it will still work but the parcel stream URL manage
 
 By default the board will be configured to accept a donation (Pay) when clicked. The owner or members of the board's group can access a setup menu by touching the board. To touch the board when Pay is set for click, it is necessary to right click the board and select Touch. Right clicking and selecting Touch will open a dialog menu with buttons to further customize the Donation Board.
 
-The main menu includes the following buttons:
+The dialog menus include the following buttons:
 
 - **START**
     - Activate an idle Donation Board
@@ -114,20 +114,24 @@ The main menu includes the following buttons:
     - Set the suggested amounts in the Pay popup, including the default pay amount
 - **CLEAR**
     - Clear all stored configuration and reset to original state
-- **DISTANCE**
-    - Set the maximum distance a logged in user can be before being logged out
-- **HOVER TXT**
-    - Set the Board name hover text
+- **STREAM**
+    - Set the parcel music stream URL
+    - Stream URL settings are saved and restored for each logged in user
 - **SHARE**
     - Set the percentage of donation shared with logged in group member
-- **TEXTURE**
-    - Open the Board texture menu
-- **TOTAL**
-    - Toggle display of total donations in hover text
 - **DEBUG**
     - The owner can enable debug mode to receive additional messages
-- **EXIT**
-    - Exit the Dialog Menu
+- **SETTINGS**
+    - **HOVER TXT**
+        - Set the Board hover text
+    - **PARTICLES**
+        - Toggle donation particle display
+    - **TEXTURE**
+        - Open the Board texture menu
+    - **TOTAL**
+        - Toggle display of total donations in hover text
+    - **DISTANCE**
+        - Set the maximum distance a logged in user can be before being logged out
 
 ## Splitting Donations
 

@@ -48,6 +48,7 @@ integer  twoSplit       = 80;  // % shared if group member logged in
 integer  tipSplit       = 0;   // % shared
 integer  totalDonations = 0;
 integer  side_one       = 0;   // Face number for front of board
+integer  use_particles  = TRUE;
 integer  particles_on   = FALSE;
 integer  randParticle   = 0;
 integer  boardStatus;          // TRUE if board active, FALSE if board is disabled
@@ -296,16 +297,18 @@ acceptDonation(key id, integer amount) {
     }
 
     // Add a little pizzazz
-    randParticle = (integer)llFrand(3.0);
-    if (randParticle == 1) {
-        bling();
-    } else if (randParticle == 2) {
-        hearts();
-    } else {
-        sparkle();
+    if (use_particles) {
+        randParticle = (integer)llFrand(3.0);
+        if (randParticle == 1) {
+            bling();
+        } else if (randParticle == 2) {
+            hearts();
+        } else {
+            sparkle();
+        }
+        particles_on = TRUE;
+        llSetTimerEvent(10);
     }
-    particles_on = TRUE;
-    llSetTimerEvent(10);
 }
 
 readyForDonations(key recKey) {
@@ -787,6 +790,7 @@ string lnk_msg(integer sender, integer num, string message, key id) {
     integer RCV_LM_HOVER       = 70;
     integer RCV_LM_LOGIN       = 75;
     integer RCV_LM_PROFILE     = 80;
+    integer RCV_LM_PARTICLES   = 84;
     integer RCV_LM_STREAM      = 88;
     integer RCV_LM_SHARE       = 90;
     integer RCV_LM_READ_AMTS   = 95;
@@ -835,6 +839,9 @@ string lnk_msg(integer sender, integer num, string message, key id) {
         // Do not send a message to other boards
         msg = "";
         updateHoverText();
+    } else if (num == RCV_LM_PARTICLES) {
+        use_particles = !use_particles;
+        msg = "";
     } else if (num == RCV_LM_PROFILE) {
         getProfilePic(current);
     } else if (num == RCV_LM_STREAM) {
@@ -966,10 +973,6 @@ default {
         // Send max distance
         llMessageLinked(LINK_THIS, SND_LM_DISTANCE, (string)maxDistance, "");
 
-        sparkle();
-        particles_on = TRUE;
-        llSetTimerEvent(10);
-
         llRequestPermissions(owner, PERMISSION_DEBIT);
     }
 
@@ -1063,6 +1066,12 @@ state donate {
         // Turn on touch to pay
         startDonation();
         toucher = NULL_KEY;
+
+        if (use_particles) {
+            sparkle();
+            particles_on = TRUE;
+            llSetTimerEvent(10);
+        }
     }
 
     listen(integer channel, string name, key id, string message) {

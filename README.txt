@@ -72,7 +72,7 @@ Dialog Menu
 
 By default the board will be configured to accept a donation (Pay) when clicked. The owner or members of the board's group can access a setup menu by touching the board. To touch the board when Pay is set for click, it is necessary to right click the board and select Touch. Right clicking and selecting Touch will open a dialog menu with buttons to further customize the Donation Board.
 
-The main menu includes the following buttons:
+The dialog menus include the following buttons:
 
 - START
 - INFO
@@ -85,10 +85,12 @@ The main menu includes the following buttons:
 - LOGOUT
 - AMOUNTS
 - CLEAR
-- DISTANCE
-- HOVER TXT
+- STREAM
 - SHARE
-- TEXTURE
-- TOTAL
 - DEBUG
-- EXIT
+- SETTINGS
+    - HOVER TXT
+    - PARTICLES
+    - TEXTURE
+    - TOTAL
+    - DISTANCE

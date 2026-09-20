@@ -97,6 +97,7 @@ integer SND_LM_DISTANCE    = 65;
 integer SND_LM_HOVER       = 70;
 integer SND_LM_LOGIN       = 75;
 integer SND_LM_PROFILE     = 80;
+integer SND_LM_PARTICLES   = 84;
 integer SND_LM_STREAM      = 88;
 integer SND_LM_SHARE       = 90;
 integer SND_LM_READ_AMTS   = 95;
@@ -364,11 +365,12 @@ displayOptsMenu() {
     menuMessage += "\nCurrent Hover Text: " + boardName;
     menuMessage += "\nCurrent Max Distance: " + (string)maxDistance + "M\n";
     menuMessage += "\nHOVER TXT = Set the Board hover text";
+    menuMessage += "\nPARTICLES = Toggle donation particle display";
     menuMessage += "\nTEXTURE = Open the Board texture menu";
     menuMessage += "\nTOTAL = Toggle display of total donations";
     menuMessage += "\nDISTANCE = Set max distance away before logout\n";
     menuMessage += "\nSelect a setting to configure\n";
-    opts_menu = ["HOVER TXT", "TEXTURE", "TOTAL", "DISTANCE", "MAIN MENU", "EXIT"];
+    opts_menu = ["HOVER TXT", "PARTICLES", "TEXTURE", "TOTAL", "DISTANCE", "MAIN MENU", "EXIT"];
     showMenu(menuMessage, opts_menu);
 }
 
@@ -637,6 +639,8 @@ state menu {
                 llSetTimerEvent(LISTEN_TTL);
                 llTextBox(id, "\nEnter the percent to share with a logged in user (currently " + (string)twoSplit + "%)", shareChannel);
                 return; // Exit the listen event
+            } else if (message == "PARTICLES") {
+                llMessageLinked(LINK_THIS, SND_LM_PARTICLES, "", "");
             } else if (message == "TEXTURE") {
                 state text;
             } else if (message == "TOTAL") {
