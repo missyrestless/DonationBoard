@@ -17,16 +17,18 @@
 //            Modification History                //
 //            --------------------                //
 // 2026-Sep-18 Created                            //
+// 2026-Sep-20 Initial working version released   //
 //                                                //
 ////////////////////////////////////////////////////
 
-string   VERSION = "1.0.1";
+string   VERSION = "1.1.0";
 
 integer  relayStatus   = TRUE;  // TRUE if the Stream Relay is active, FALSE if not
 integer  showHoverText = FALSE;
 integer  debug         = FALSE;
+integer  deeded        = FALSE; // TRUE if parcel is deeded to a group
 integer  relayListenID;
-integer  relayChannel;           // Channel for communication between screens, based on owner
+integer  relayChannel;          // Channel for communication between screens, based on owner
  
 key      groupKey;
 key      ownerKey;
@@ -100,11 +102,12 @@ integer chkOwner() {
     // If the parcel is group-owned, the owner key and group key are identical
     if ((ownerKey == groupKey) && (groupKey != NULL_KEY)) {
         llOwnerSay("OK: parcel is deeded to Group: " + groupName);
-        return TRUE;
+        deeded = TRUE;
     } else {
         llOwnerSay("WARNING: parcel is privately owned and not deeded to a group.");
-        return FALSE;
+        deeded = FALSE;
     }
+    return deeded;
 }
 
 integer isValidURL(string url) {
@@ -162,11 +165,21 @@ default {
     state_entry() {
         toucher   = NULL_KEY;
 
+        // Sets global variables
+        setGroupName();
+
         relaySlurl = getRelaySlurl();
         parcelName = getParcelName();
 
-        // Sets global variables
-        setGroupName();
+        // Check if relay needs to be deeded to a group
+        if (chkOwner()) {
+            llOwnerSay("Deed the Truth & Beauty Stream Relay to the Group: " + groupName);
+        } else {
+            llOwnerSay("The Truth & Beauty Stream Relay is only required on parcels that have been deeded to a group");
+            llOwnerSay("If this parcel is going to remain privately owned then you can delete the relay object");
+            llOwnerSay("If the parcel is deeded to a group, re-rez or reset the Stream Relay object");
+            llOwnerSay("Once the parcel is group owned, deed the Truth & Beauty Stream Relay to the same group that is this parcel owner");
+        }
 
         // Remove any previous hover text
         llSetText("", < 1.0, 1.0, 1.0>, 1.0);
@@ -184,7 +197,11 @@ default {
         relayChannel = 0x80000000 | (integer)("0x" + hexPart);
 
         llListenRemove(relayListenID);
-        relayListenID = llListen(relayChannel, "", NULL_KEY, "");
+        if (deeded) {
+            relayListenID = llListen(relayChannel, "", NULL_KEY, "");
+        } else {
+            llOwnerSay("Truth & Beauty Stream Relay is Disabled on privately owned parcel");
+        }
     }
 
     touch_start(integer num_detected) {
@@ -223,17 +240,6 @@ default {
     }
 
     on_rez(integer num) {
-        // Check if relay has been deeded to a group
-        setGroupName();
-        if (chkOwner()) {
-            llOwnerSay("Deed the Truth & Beauty Stream Relay to the Group: " + groupName);
-        } else {
-            llOwnerSay("The Truth & Beauty Stream Relay is only required on parcels that have been deeded to a group");
-            llOwnerSay("If this parcel is going to remain privately owned then you can delete the relay object");
-            llOwnerSay("If the parcel is deeded to a group, re-rez or reset the Stream Relay object");
-            llOwnerSay("Once the parcel is group owned, deed the Truth & Beauty Stream Relay to the same group that is this parcel owner");
-        }
-
         llResetScript();
     }
 }
