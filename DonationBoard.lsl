@@ -25,10 +25,11 @@
 //             Set owner key in linkset datastore //
 // 2026-Sep-18 Send stream URL to Stream Relay on //
 //             parcel deeded to group             //
+// 2026-Sep-20 Detect group owned parcel in init  //
 //                                                //
 ////////////////////////////////////////////////////
 
-string   VERSION = "1.1.0";
+string   VERSION = "1.1.1";
 
 integer  ALL     = TRUE;      // Set to TRUE to effect all boards, FALSE for single board
 integer  GROUP   = TRUE;      // Set to TRUE to allow group members to manage, FALSE for owner only

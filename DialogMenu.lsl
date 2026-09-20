@@ -18,6 +18,7 @@
 // 15-Sep-2026 - Set parcel stream URL when user logs in/out
 // 16-Sep-2026 - Store owner key in linkset datastore
 //               Preserve owner key across linkset datastore clear
+// 20-Sep-2026 - Add Settings sub-menu
 //
 // VARIABLES
 //
@@ -50,7 +51,7 @@ string  linksetValue;
 string  menuMessage;
 string  streamURL      = "";
 string  boardVersion   = "";
-string  defaultVersion = "1.1.0";
+string  defaultVersion = "1.1.1";
 
 // Linkset Data Keys
 // Must match the definitions in DonationBoard.lsl

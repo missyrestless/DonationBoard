@@ -21,7 +21,7 @@
 //                                                //
 ////////////////////////////////////////////////////
 
-string   VERSION = "1.1.0";
+string   VERSION = "1.1.1";
 
 integer  relayStatus   = TRUE;  // TRUE if the Stream Relay is active, FALSE if not
 integer  showHoverText = FALSE;
