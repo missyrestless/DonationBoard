@@ -45,7 +45,7 @@ It is necessary to give the board permission to take money in order to support t
 
 ### Using the Board on Group Owned Land
 
-In order to use the Truth &amp; Beauty Donation Board on group owned land, the Truth & Beauty Stream Relay object must be rezzed on the parcel. Once rezzed, deed the Stream Relay to the same group that owns the parcel.
+In order to use the Truth &amp; Beauty Donation Board on group owned land, the Truth &amp; Beauty Stream Relay object must be rezzed on the parcel. Once rezzed, deed the Stream Relay to the same group that owns the parcel.
 
 #### Individually owned parcels
 
@@ -68,6 +68,8 @@ First, make sure the relay belongs to the correct group. The owner can right-cli
 Once the desired group is set, click the Share checkbox below the group in the Edit window. Click the Deed button and Close the Edit window (Edit → General → Share [checkbox] → Deed).
 
 ##### Summary of Group Deeding
+
+The Truth &amp; Beauty Stream Relay can be rezzed to determine if the parcel is deeded to a group. A message will be sent to the owner informing them of the status and required action, if any.
 
 If the parcel is owned by an individual then no group configuration is necessary.
 
