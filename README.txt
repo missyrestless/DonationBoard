@@ -55,7 +55,8 @@ Using the Board on Group Owned Land
 
 In order to use the Truth &amp; Beauty Donation Board on group owned land, the Truth & Beauty Stream Relay object must be rezzed on the parcel. Once rezzed, deed the Stream Relay to the same group that owns the parcel.
 
-The Truth & Beauty Stream Relay can be rezzed to determine if the parcel is deeded to a group. A message will be sent to the owner informing them of the status and required action, if any.
+The Truth &amp; Beauty Donation Board will inform the owner if the Stream Relay needs to be rezzed and deeded.
+The Truth &amp; Beauty Stream Relay, when rezzed, will also message the owner with parcel and group status.
 
 Individually owned parcels
 ───────────────────────────

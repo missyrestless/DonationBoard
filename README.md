@@ -69,7 +69,8 @@ Once the desired group is set, click the Share checkbox below the group in the E
 
 ##### Summary of Group Deeding
 
-The Truth &amp; Beauty Stream Relay can be rezzed to determine if the parcel is deeded to a group. A message will be sent to the owner informing them of the status and required action, if any.
+The Truth &amp; Beauty Donation Board will inform the owner if the Stream Relay needs to be rezzed and deeded.
+The Truth &amp; Beauty Stream Relay, when rezzed, will also message the owner with parcel and group status.
 
 If the parcel is owned by an individual then no group configuration is necessary.
 
