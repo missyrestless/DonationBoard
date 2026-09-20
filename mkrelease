@@ -55,6 +55,7 @@ gh release create v${VERSION} ${DRAFT} \
                   --notes-file README.md \
                   DonationBoard.lslo \
                   DialogMenu.lslo \
+                  StreamRelay.lslo \
                   ${PRODUCT}-${VERSION}.tar.gz
 
 git fetch --tags origin

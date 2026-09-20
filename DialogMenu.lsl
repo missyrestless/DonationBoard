@@ -50,12 +50,11 @@ string  linksetValue;
 string  menuMessage;
 string  streamURL      = "";
 string  boardVersion   = "";
-string  defaultVersion = "1.0.5";
+string  defaultVersion = "1.1.0";
 
 // Linkset Data Keys
 // Must match the definitions in DonationBoard.lsl
 //
-// Owner of Donation Board object, prior to deeding to group
 string  OWNER_LSD_KEY      = "owner";
 // Donation Board version linkset data key
 string  VERSION_LSD_KEY    = "version";

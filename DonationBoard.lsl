@@ -4,6 +4,7 @@
 // Message or Touch by owner of object toggles Menu and Payment states           //
 // Listens on channel 0 for trigger messages to board                            //
 // Messages other boards in region with same owner to trigger toggle command     //
+// Sends the parcel stream URL to the Stream Relay object on group owned land    //
 ///////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////
@@ -22,17 +23,21 @@
 // 2026-Sep-15 Auto set parcel stream URL         //
 // 2026-Sep-16 Set owner key before group deed    //
 //             Set owner key in linkset datastore //
+// 2026-Sep-18 Send stream URL to Stream Relay on //
+//             parcel deeded to group             //
 //                                                //
 ////////////////////////////////////////////////////
 
-string   VERSION = "1.0.5";
+string   VERSION = "1.1.0";
 
 integer  ALL     = TRUE;      // Set to TRUE to effect all boards, FALSE for single board
 integer  GROUP   = TRUE;      // Set to TRUE to allow group members to manage, FALSE for owner only
-integer  DEEDED  = FALSE;     // TRUE if the Donation Board has been deeded to a group
+integer  DEEDED  = FALSE;     // TRUE if the parcel has been deeded to a group
 integer  listenerID;
 integer  objListenID;
 integer  objChannel;           // Channel for communication between screens, based on owner
+// integer  relayListenID;
+integer  relayChannel;         // Channel for communication with the Stream Relay, based on parcel ID
 integer  listenChannel  = 0;   // Channel for chat and gestures
  
 integer  loggedIn       = FALSE;
@@ -286,7 +291,7 @@ acceptDonation(key id, integer amount) {
     }
 
     if (ownerShare > 0) {
-        if (DEEDED) llGiveMoney(owner, ownerShare);
+        llGiveMoney(owner, ownerShare);
         llInstantMessage(owner, "You retained L$" + (string)ownerShare + " from a donation.");
     }
 
@@ -675,9 +680,11 @@ setOwner() {
 
     // If the parcel is group-owned, the owner key and group key are identical
     if ((ownerKey == groupKey) && (groupKey != NULL_KEY)) {
-        if (!DEEDED) llOwnerSay("WARNING: parcel is deeded to a group. Group Key: " + (string)groupKey);
+        if (!DEEDED) llOwnerSay("Parcel is deeded to a group. Group: " + "secondlife:///app/group/" + (string)groupKey + "/about");
+        DEEDED = TRUE;
     } else {
-        if (DEEDED) llOwnerSay("WARNING: parcel is privately owned and not deeded to a group.");
+        if (DEEDED) llOwnerSay("Parcel is privately owned and not deeded to a group.");
+        DEEDED = FALSE;
     }
 }
 
@@ -697,7 +704,7 @@ initPrim() {
         // No parcel stream URL is stored
         if (currURL == "") {
             // No parcel stream URL is set or we can't get it
-            llSetParcelMusicURL(DEF_STREAM_URL);
+            setParcelMusicURL(DEF_STREAM_URL);
             streamURL = DEF_STREAM_URL;
             chkMusicURL(streamURL);
         } else {
@@ -884,6 +891,14 @@ chkMusicURL(string url) {
     }
 }
 
+setParcelMusicURL(string URL) {
+    if (DEEDED) {
+        llRegionSay(relayChannel, URL);
+    } else {
+        llSetParcelMusicURL(URL);
+    }
+}
+
 setStreamURL(string url, key id) {
     STREAM_URL_LSD_KEY = STREAM_URL_PREFIX + (string)id;
     streamURL = llLinksetDataRead(STREAM_URL_LSD_KEY);
@@ -896,7 +911,7 @@ setStreamURL(string url, key id) {
     if (streamURL != "") {
         llMessageLinked(LINK_THIS, SND_LM_STREAM, streamURL, id);
         if (llGetParcelMusicURL() != streamURL) {
-            llSetParcelMusicURL(streamURL);
+            setParcelMusicURL(streamURL);
             chkMusicURL(streamURL);
         }
     }
@@ -913,6 +928,31 @@ default {
         // We need to know which user has owner management privileges
         setOwner();
 
+        // 1. Retrieve the parcel ID (UUID key) for the object's current position
+        list details = llGetParcelDetails(llGetPos(), [PARCEL_DETAILS_ID]);
+        key parcelID = llList2Key(details, 0);
+
+        // 2. Extract an 8-character hex block (e.g., the first 8 characters)
+        string hexPart = llGetSubString((string)parcelID, 0, 7);
+
+        // 3. Convert the hex string to an integer and force it negative
+        // Adding "0x" allows LSL to implicitly typecast the hex string to an integer.
+        // Bitwise OR with 0x80000000 sets the sign bit, forcing a large negative range.
+        relayChannel = 0x80000000 | (integer)("0x" + hexPart);
+
+        // No need to listen on the relay channel as messages are only outgoing
+        // llListenRemove(relayListenID);
+        // relayListenID = llListen(relayChannel, "", NULL_KEY, "");
+
+        // Compute a large negative channel number based on the object owner
+        // All boards owned by the same owner will use the same channel
+        objChannel = 0x80000000 | (integer) ( "0x" + (string) owner );
+        objChannel += 1;
+        llListenRemove(listenerID);
+        listenerID = llListen(listenChannel, "", owner, "");
+        llListenRemove(objListenID);
+        objListenID = llListen(objChannel, "", NULL_KEY, "");
+
         // Set Prim face textures if not already set
         if (needInit) {
             initPrim();
@@ -925,15 +965,6 @@ default {
         llSetText("", < 1.0, 1.0, 1.0>, 1.0);
         // Send max distance
         llMessageLinked(LINK_THIS, SND_LM_DISTANCE, (string)maxDistance, "");
-
-        // Compute a large negative channel number based on the object owner
-        // All boards owned by the same owner will use the same channel
-        objChannel = 0x80000000 | (integer) ( "0x" + (string) owner );
-        objChannel += 1;
-        llListenRemove(listenerID);
-        listenerID = llListen(listenChannel, "", owner, "");
-        llListenRemove(objListenID);
-        objListenID = llListen(objChannel, "", NULL_KEY, "");
 
         sparkle();
         particles_on = TRUE;

@@ -32,8 +32,8 @@ The Truth &amp; Beauty Donation Board includes the following features:
     - Select from any of the several textures provided to customize
     - Drag and drop any texture into the prim Contents to add that texture to the dialog menu Texture options
 - A particle display is emitted when rezzed/reset and when a donation is made
-- The `DonationBoard` and `DialogMenu` LSL scripts are low lag and have been optimized with `LSL-PyOptimizer`
-- The `DonationBoard` and `DialogMenu` scripts are Open Source and can be viewed, copied, and modified freely within the terms of the license
+- The `DonationBoard`, `StreamRelay`, and `DialogMenu` LSL scripts are low lag, optimized with `LSL-PyOptimizer`
+- The LSL scripts are Open Source and can be viewed, copied, and modified freely within the terms of the license
 
 ## Setup
 
@@ -41,11 +41,11 @@ The Truth &amp; Beauty Donation Board auto-configures when rezzed and is active 
 
 There are no notecards to edit, all configuration is maintained in the prim's linkset datastore.
 
-It is necessary to give the board permission to take money in order to support the sharing feature. You MUST allow it for the board to work if you want to share donations. The permission popup will be displayed when the board is rezzed and any time it is reset. Accept the permission request, this is a standard part of any object that takes payments.
+It is necessary to give the board permission to take money in order to support the sharing feature. You MUST allow it for the board to work if you want to share donations. The permission popup will be displayed when the board is rezzed and any time it is reset. Accept the permission request, this is a standard part of any object that splits payments.
 
-### Deeding the Board on Group Owned Land
+### Using the Board on Group Owned Land
 
-The Truth &amp; Beauty Donation Board can set the parcel music stream URL. In order to do so, the board must be owned by the same owner as the land. If the parcel has been deeded to a group then the Donation Board must also be deeded to the same group.
+In order to use the Truth &amp; Beauty Donation Board on group owned land, the Truth & Beauty Stream Relay object must be rezzed on the parcel. Once rezzed, deed the Stream Relay to the same group that owns the parcel.
 
 #### Individually owned parcels
 
@@ -53,17 +53,17 @@ If you are the owner of the parcel ("About Land" shows you as the owner), no add
 
 #### Group owned parcels
 
-If "About Land" shows the name of a group as owner, the parcel is group owned. In this case, you need to deed the Donation Board object to group.
+If "About Land" shows the name of a group as owner, the parcel is group owned. In this case, you need to rez and deed the Stream Relay object to the group.
 
 ##### Group Deeding
 
 If your parcel is owned by a group, but does not have group deeding enabled, you need to ask the owner of your land to enable group deeding.
 
-##### Set the Donation Board Group
+##### Set the Stream Relay Group
 
-First, make sure the board belongs to the correct group. The owner can right-click the board and select Edit. If the Group: setting in the General tab of the Edit window is set to a group different than that shown in "About Land" then click the wrench icon to the right of the Group: setting. Select the group to use in the Group chooser popup.
+First, make sure the relay belongs to the correct group. The owner can right-click the relay and select Edit. If the Group: setting in the General tab of the Edit window is set to a group different than that shown in "About Land" then click the wrench icon to the right of the Group: setting. Select the group to use in the Group chooser popup.
 
-##### Deed the Donation Board to the Group
+##### Deed the Stream Relay to the Group
 
 Once the desired group is set, click the Share checkbox below the group in the Edit window. Click the Deed button and Close the Edit window (Edit → General → Share [checkbox] → Deed).
 
@@ -73,13 +73,13 @@ If the parcel is owned by an individual then no group configuration is necessary
 
 If the parcel is group owned:
 
-- The board must be set to the desired group
+- The relay must be set to the desired group
 - Group deeding must be enabled on the parcel
-- The board must be deeded to that group
+- The relay must be deeded to that group
 
-If unable to deed the board, it will still work but the parcel stream URL management function will be disabled.
+If unable to deed the relay, it will still work but the parcel stream URL management function will be disabled.
 
-**[Note:]** It is recommended to take a copy of the Donation Board back into your inventory **Before Deeding** it to a group. This makes it easier to modify the board later if needed and ensures you will always have a copy to re-deed if necessary.
+**[Note:]** It is recommended to take a copy of the Stream Relay back into your inventory **Before Deeding** it to a group. This makes it easier to modify the relay later if needed and ensures you will always have a copy to re-deed if necessary.
 
 ## Dialog Menu
 

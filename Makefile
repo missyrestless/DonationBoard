@@ -18,12 +18,12 @@ PREPROC_PATH=cpp
 # End of configuration area
 
 # Version being compiled (LSL string)
-VERSION="1.0.5"
+VERSION="1.1.0"
 
 
 # Note some of these scripts don't strictly need to be optimized for memory.
 
-OPTIMIZED=DonationBoard.lslo DialogMenu.lslo
+OPTIMIZED=DonationBoard.lslo DialogMenu.lslo StreamRelay.lslo
 
 UNOPTIMIZED=
 
