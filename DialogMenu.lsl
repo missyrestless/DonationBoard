@@ -50,7 +50,7 @@ string  linksetValue;
 string  menuMessage;
 string  streamURL      = "";
 string  boardVersion   = "";
-string  defaultVersion = "1.0.5";
+string  defaultVersion = "1.1.0";
 
 // Linkset Data Keys
 // Must match the definitions in DonationBoard.lsl

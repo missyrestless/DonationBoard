@@ -4,6 +4,8 @@ See https://github.com/missyrestless/DonationBoard#readme for the latest updated
 
 Rez a Truth & Beauty Donation Board and position it where you want. It automatically configures as a donation board for the parcel in which it is rezzed. Set the donation board group and members of that group can login, the board automatically converting to a shared tip system.
 
+On a group owned parcel, also rez the Truth & Beauty Stream Relay and deed it to the same group that owns the parcel.
+
 Unlike other advanced tip jar and donation board systems, the Truth & Beauty Donation Board does not rely on an external 3rd party web service or website. You don't need anybody else's website to work.
 
 Features
@@ -27,8 +29,8 @@ The Truth & Beauty Donation Board includes the following features:
     - Select from any of the several textures provided to customize
     - Drag and drop any texture into the prim Contents to add that texture to the dialog menu Texture options
 - A particle display is emitted when rezzed/reset and when a donation is made
-- The 'DonationBoard' and 'DialogMenu' LSL scripts are low lag and have been optimized with 'LSL-PyOptimizer'
-- The 'DonationBoard' and 'DialogMenu' scripts are Open Source and can be viewed, copied, and modified freely within the terms of the license
+- The LSL scripts are low lag and have been optimized with 'LSL-PyOptimizer'
+- The scripts are Open Source and can be viewed, copied, and modified freely within the terms of the license
 
 Setup
 ──────
@@ -48,10 +50,10 @@ In order for the donation splitting feature to work, the request for Debit permi
 
 If Debit permission is denied then the board will still function but splitting donations will be disabled.
 
-Deeding the Board on Group Owned Land
-──────────────────────────────────────
+Using the Board on Group Owned Land
+────────────────────────────────────
 
-The Truth & Beauty Donation Board can set the parcel music stream URL. In order to do so, the board must be owned by the same owner as the land. If the parcel has been deeded to a group then the Donation Board must also be deeded to the same group.
+In order to use the Truth &amp; Beauty Donation Board on group owned land, the Truth & Beauty Stream Relay object must be rezzed on the parcel. Once rezzed, deed the Stream Relay to the same group that owns the parcel.
 
 Individually owned parcels
 ───────────────────────────
@@ -61,9 +63,7 @@ If you are the owner of the parcel ("About Land" shows you as the owner), no add
 Group owned parcels
 ────────────────────
 
-If "About Land" shows the name of a group as owner, the parcel is group owned. In this case, you need to deed the Donation Board object to group.
-
-If unable to deed the board, it will still work but the parcel stream URL management function will be disabled.
+If "About Land" shows the name of a group as owner, the parcel is group owned. In this case, you need to rez and deed the Stream Relay object to the group.
 
 Dialog Menu
 ────────────

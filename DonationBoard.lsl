@@ -28,7 +28,7 @@
 //                                                //
 ////////////////////////////////////////////////////
 
-string   VERSION = "1.0.5";
+string   VERSION = "1.1.0";
 
 integer  ALL     = TRUE;      // Set to TRUE to effect all boards, FALSE for single board
 integer  GROUP   = TRUE;      // Set to TRUE to allow group members to manage, FALSE for owner only
@@ -680,9 +680,11 @@ setOwner() {
 
     // If the parcel is group-owned, the owner key and group key are identical
     if ((ownerKey == groupKey) && (groupKey != NULL_KEY)) {
-        if (!DEEDED) llOwnerSay("WARNING: parcel is deeded to a group. Group Key: " + (string)groupKey);
+        if (!DEEDED) llOwnerSay("Parcel is deeded to a group. Group: " + "secondlife:///app/group/" + (string)groupKey + "/about");
+        DEEDED = TRUE;
     } else {
-        if (DEEDED) llOwnerSay("WARNING: parcel is privately owned and not deeded to a group.");
+        if (DEEDED) llOwnerSay("Parcel is privately owned and not deeded to a group.");
+        DEEDED = FALSE;
     }
 }
 
@@ -926,27 +928,18 @@ default {
         // We need to know which user has owner management privileges
         setOwner();
 
-        // Set Prim face textures if not already set
-        if (needInit) {
-            initPrim();
-        }
-
-        // Retrieve any stored configuration or set defaults
-        getDatastoreValues();
-
-        // Remove any previous hover text
-        llSetText("", < 1.0, 1.0, 1.0>, 1.0);
-        // Send max distance
-        llMessageLinked(LINK_THIS, SND_LM_DISTANCE, (string)maxDistance, "");
-
-         // Get the parcel details at the object's current position
+        // 1. Retrieve the parcel ID (UUID key) for the object's current position
         list details = llGetParcelDetails(llGetPos(), [PARCEL_DETAILS_ID]);
-        // Extract the parcel key (ID) from the list
         key parcelID = llList2Key(details, 0);
 
-        // Compute a large negative channel number based on the parcel ID
-        // Use this channel to send the stream URL to the Stream Relay object
-        relayChannel = 0x80000000 | (integer) ( "0x" + (string) parcelID );
+        // 2. Extract an 8-character hex block (e.g., the first 8 characters)
+        string hexPart = llGetSubString((string)parcelID, 0, 7);
+
+        // 3. Convert the hex string to an integer and force it negative
+        // Adding "0x" allows LSL to implicitly typecast the hex string to an integer.
+        // Bitwise OR with 0x80000000 sets the sign bit, forcing a large negative range.
+        relayChannel = 0x80000000 | (integer)("0x" + hexPart);
+
         // No need to listen on the relay channel as messages are only outgoing
         // llListenRemove(relayListenID);
         // relayListenID = llListen(relayChannel, "", NULL_KEY, "");
@@ -959,6 +952,19 @@ default {
         listenerID = llListen(listenChannel, "", owner, "");
         llListenRemove(objListenID);
         objListenID = llListen(objChannel, "", NULL_KEY, "");
+
+        // Set Prim face textures if not already set
+        if (needInit) {
+            initPrim();
+        }
+
+        // Retrieve any stored configuration or set defaults
+        getDatastoreValues();
+
+        // Remove any previous hover text
+        llSetText("", < 1.0, 1.0, 1.0>, 1.0);
+        // Send max distance
+        llMessageLinked(LINK_THIS, SND_LM_DISTANCE, (string)maxDistance, "");
 
         sparkle();
         particles_on = TRUE;
